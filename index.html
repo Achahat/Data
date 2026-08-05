@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NSE Bhavcopy Downloader</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#2f81f7; --green:#3fb950; --amber:#d29922;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; padding:24px; max-width:960px; margin:0 auto;}
+  h1{font-size:22px; margin-bottom:4px;}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:18px;}
+  .card h2{font-size:15px; margin-bottom:12px; color:var(--accent);}
+  label{font-size:12px; color:var(--muted); display:block; margin-bottom:4px;}
+  input[type=date], input[type=text], select{
+    background:var(--bg); color:var(--text); border:1px solid var(--border);
+    border-radius:6px; padding:7px 10px; font-size:13px;
+  }
+  .row{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;}
+  .chk{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text); padding-bottom:8px;}
+  button{
+    background:var(--accent); color:#fff; border:none; border-radius:6px;
+    padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  button:hover{opacity:.88;}
+  button.ghost{background:transparent; border:1px solid var(--border); color:var(--text);}
+  #links a{display:inline-block; margin:3px 4px 3px 0; padding:5px 10px; background:var(--bg);
+    border:1px solid var(--border); border-radius:6px; color:var(--accent); font-size:12px; text-decoration:none;}
+  #links a:hover{border-color:var(--accent);}
+  #links a.done{color:var(--green); border-color:var(--green);}
+  .note{font-size:12px; color:var(--muted); margin-top:8px;}
+  .drop{border:2px dashed var(--border); border-radius:10px; padding:26px; text-align:center;
+    color:var(--muted); font-size:13px; cursor:pointer; transition:.15s;}
+  .drop.over{border-color:var(--accent); color:var(--accent);}
+  table{width:100%; border-collapse:collapse; font-size:12px; margin-top:12px;}
+  th,td{border-bottom:1px solid var(--border); padding:5px 8px; text-align:right; white-space:nowrap;}
+  th{color:var(--muted); position:sticky; top:0; background:var(--card);}
+  td:first-child,th:first-child, td:nth-child(2),th:nth-child(2), td:nth-child(3),th:nth-child(3){text-align:left;}
+  .tblwrap{max-height:380px; overflow:auto; margin-top:10px;}
+  .pill{display:inline-block; background:var(--bg); border:1px solid var(--border); border-radius:99px;
+    padding:2px 10px; font-size:11px; color:var(--muted); margin-left:8px;}
+  .status{font-size:13px; margin-top:10px;}
+  .status.ok{color:var(--green);} .status.warn{color:var(--amber);}
+</style>
+</head>
+<body>
+
+<h1>NSE Bhavcopy Downloader</h1>
+<div class="sub">Daily OHLC, volume &amp; delivery data for all NSE shares &middot; source: nsearchives.nseindia.com</div>
+
+<!-- STEP 1 : GET FILES -->
+<div class="card">
+  <h2>Step 1 — Download bhavcopy files for a period</h2>
+  <div class="row">
+    <div><label>From</label><input type="date" id="from"></div>
+    <div><label>To</label><input type="date" id="to"></div>
+    <div>
+      <label>File type</label>
+      <select id="ftype">
+        <option value="full">Full bhavdata (OHLC + delivery %) — CSV</option>
+        <option value="udiff">Official bhavcopy (UDiFF) — ZIP</option>
+      </select>
+    </div>
+    <div class="chk"><input type="checkbox" id="skipwe" checked> skip weekends</div>
+  </div>
+  <button onclick="genLinks()">Generate links</button>
+  <button class="ghost" onclick="downloadAll()">Download all</button>
+  <div id="links" style="margin-top:12px"></div>
+  <div class="note">Click a link (or “Download all”) — files save to your browser’s Downloads folder.
+    NSE holidays will show “file not found”, that’s normal. If “Download all” stalls, allow multiple downloads when the browser asks.</div>
+</div>
+
+<!-- STEP 2 : FILTER -->
+<div class="card">
+  <h2>Step 2 — Filter &amp; merge <span class="pill">optional</span></h2>
+  <div class="drop" id="drop" onclick="document.getElementById('fpick').click()">
+    Drop the downloaded CSV files here (or click to browse)
+  </div>
+  <input type="file" id="fpick" multiple accept=".csv" style="display:none">
+  <div class="row" style="margin-top:14px">
+    <div style="flex:1; min-width:260px">
+      <label>Symbols (comma separated, empty = all shares)</label>
+      <input type="text" id="syms" placeholder="e.g. RELIANCE, TCS, HDFCBANK" style="width:100%">
+    </div>
+    <div>
+      <label>Series</label>
+      <select id="series">
+        <option value="EQ">EQ only</option>
+        <option value="EQ,BE,BZ,SM,ST">All equity series</option>
+        <option value="">Everything</option>
+      </select>
+    </div>
+  </div>
+  <button onclick="applyFilter()">Apply filter</button>
+  <button class="ghost" onclick="exportCSV()">Export merged CSV</button>
+  <div class="status" id="status"></div>
+  <div class="tblwrap"><table id="tbl"></table></div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function pad(n){return String(n).padStart(2,'0');}
+function* dates(from,to,skipWE){
+  let d=new Date(from+'T00:00:00');
+  const end=new Date(to+'T00:00:00');
+  while(d<=end){
+    const day=d.getDay();
+    if(!skipWE||(day!==0&&day!==6)) yield new Date(d);
+    d.setDate(d.getDate()+1);
+  }
+}
+function urlFor(d,type){
+  const dd=pad(d.getDate()), mm=pad(d.getMonth()+1), yyyy=d.getFullYear();
+  if(type==='full')
+    return {url:`https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_${dd}${mm}${yyyy}.csv`,
+            name:`sec_bhavdata_full_${dd}${mm}${yyyy}.csv`};
+  return {url:`https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_${yyyy}${mm}${dd}_F_0000.csv.zip`,
+          name:`BhavCopy_${yyyy}${mm}${dd}.csv.zip`};
+}
+
+/* ---------- step 1 ---------- */
+function genLinks(){
+  const from=document.getElementById('from').value, to=document.getElementById('to').value;
+  if(!from||!to){alert('Pick both dates');return;}
+  const type=document.getElementById('ftype').value;
+  const skip=document.getElementById('skipwe').checked;
+  const box=document.getElementById('links'); box.innerHTML='';
+  let n=0;
+  for(const d of dates(from,to,skip)){
+    const {url,name}=urlFor(d,type);
+    const a=document.createElement('a');
+    a.href=url; a.download=name; a.textContent=`${pad(d.getDate())} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+    a.title=name;
+    a.addEventListener('click',()=>a.classList.add('done'));
+    box.appendChild(a); n++;
+  }
+  if(!n) box.textContent='No trading days in that range.';
+}
+function downloadAll(){
+  const as=[...document.querySelectorAll('#links a')];
+  if(!as.length){genLinks(); return downloadAll0();}
+  downloadAll0();
+  function downloadAll0(){
+    const list=[...document.querySelectorAll('#links a')];
+    list.forEach((a,i)=>setTimeout(()=>{a.click();},i*600));
+  }
+}
+
+/* ---------- step 2 ---------- */
+let rows=[], header=[];
+const drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');loadFiles(e.dataTransfer.files);});
+document.getElementById('fpick').addEventListener('change',e=>loadFiles(e.target.files));
+
+function loadFiles(files){
+  let pending=files.length, added=0;
+  [...files].forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const lines=r.result.split(/\r?\n/).filter(l=>l.trim());
+      if(!lines.length){if(--pending===0)done();return;}
+      const h=lines[0].split(',').map(s=>s.trim());
+      if(!header.length) header=h;
+      for(let i=1;i<lines.length;i++){
+        const c=lines[i].split(',').map(s=>s.trim());
+        if(c.length>=h.length-1){rows.push(c);added++;}
+      }
+      if(--pending===0)done();
+    };
+    r.readAsText(f);
+  });
+  function done(){
+    setStatus(`Loaded ${added.toLocaleString()} new rows — total ${rows.length.toLocaleString()} rows from all files.`,'ok');
+    applyFilter();
+  }
+}
+let view=[];
+function applyFilter(){
+  if(!rows.length){setStatus('No files loaded yet.','warn');return;}
+  const iSym=header.findIndex(h=>/^SYMBOL$/i.test(h));
+  const iSer=header.findIndex(h=>/SERIES/i.test(h));
+  const syms=document.getElementById('syms').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
+  const ser=document.getElementById('series').value.split(',').filter(Boolean);
+  view=rows.filter(r=>{
+    if(ser.length&&iSer>-1&&!ser.includes(r[iSer]))return false;
+    if(syms.length&&iSym>-1&&!syms.includes(r[iSym].toUpperCase()))return false;
+    return true;
+  });
+  render();
+  setStatus(`${view.length.toLocaleString()} rows match the filter (of ${rows.length.toLocaleString()} loaded).`,'ok');
+}
+function render(){
+  const t=document.getElementById('tbl');
+  const show=view.slice(0,500);
+  t.innerHTML='<tr>'+header.map(h=>`<th>${h}</th>`).join('')+'</tr>'+
+    show.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('');
+  if(view.length>500) t.innerHTML+=`<tr><td colspan="${header.length}" style="text-align:center;color:var(--muted)">… showing first 500 of ${view.length.toLocaleString()} — export to get everything</td></tr>`;
+}
+function exportCSV(){
+  if(!view.length){setStatus('Nothing to export — load files first.','warn');return;}
+  const csv=[header.join(',')].concat(view.map(r=>r.join(','))).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='nse_bhavcopy_filtered.csv';
+  a.click();
+  setStatus(`Exported ${view.length.toLocaleString()} rows to nse_bhavcopy_filtered.csv`,'ok');
+}
+function setStatus(msg,cls){const s=document.getElementById('status');s.textContent=msg;s.className='status '+cls;}
+
+/* defaults: last 5 trading days */
+(function(){
+  const today=new Date(); const from=new Date(); from.setDate(today.getDate()-7);
+  document.getElementById('to').valueAsDate=today;
+  document.getElementById('from').valueAsDate=from;
+})();
+</script>
+</body>
+</html>
