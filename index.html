@@ -103,13 +103,13 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
       <div class="nav-drop"><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="sx">Sector Strategy</a></div></div>
     <div class="nav-item"><button class="nav-btn">Stoch Strategy ▾</button>
-      <div class="nav-drop"><a class="soon">Coming soon</a></div></div>
+      <div class="nav-drop"><a data-pane="ss">RSI + Stoch Reversal</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
-      <div class="nav-drop"><a class="soon">Coming soon</a></div></div>
+      <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
       <div class="nav-drop"><a class="soon">Coming soon</a></div></div>
     <div class="nav-item"><button class="nav-btn">Tools ▾</button>
-      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a></div></div>
+      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a><a data-pane="sr">Saved Runs</a></div></div>
   </div>
 </div>
 
@@ -187,6 +187,7 @@ a{color:var(--accent);}
       <div>
         <button id="stNextBtn" onclick="STRATS.st.advance()">Next month ▶</button>
         <button class="ghost" onclick="STRATS.st.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('st')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.st.reset()">↺ New strategy</button>
       </div>
     </div>
@@ -237,6 +238,7 @@ a{color:var(--accent);}
       <div>
         <button id="mcNextBtn" onclick="STRATS.mc.advance()">Next month ▶</button>
         <button class="ghost" onclick="STRATS.mc.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('mc')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.mc.reset()">↺ New strategy</button>
       </div>
     </div>
@@ -291,6 +293,7 @@ a{color:var(--accent);}
       <div>
         <button id="acNextBtn" class="hidden"></button>
         <button class="ghost" onclick="STRATS.ac.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('ac')">💾 Save run</button>
         <button class="ghost" onclick="acReset()">↺ New run</button>
       </div>
     </div>
@@ -348,6 +351,7 @@ a{color:var(--accent);}
       <div>
         <button id="sxNextBtn" onclick="STRATS.sx.advance()">Next month ▶</button>
         <button class="ghost" onclick="STRATS.sx.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('sx')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.sx.reset()">↺ New strategy</button>
       </div>
     </div>
@@ -375,6 +379,58 @@ a{color:var(--accent);}
       <div class="tblwrap" style="max-height:240px"><table id="sxLogTbl"></table></div>
     </div>
   </div>
+</div>
+
+<!-- STOCH STRATEGY: RSI + STOCH REVERSAL -->
+<div class="card hidden" id="pane-ss">
+  <div class="section-head">RSI + Stoch Reversal — find the pattern across all history</div>
+  <div class="row">
+    <div><label>RSI reaches ≥</label><input type="number" id="ssRsi" style="width:90px" value="80"></div>
+    <div><label>Then Stoch %K falls ≤</label><input type="number" id="ssStoch" style="width:90px" value="20"></div>
+    <div><label>Within (bars)</label><input type="number" id="ssWin" style="width:80px" value="10"></div>
+    <div><label>Then track next (bars)</label><input type="number" id="ssFwd" style="width:80px" value="12"></div>
+    <div><label>Timeframe</label>
+      <select id="ssTf"><option value="D">Daily</option><option value="W" selected>Weekly</option><option value="M">Monthly</option></select></div>
+    <div><label>Min Mcap (₹ cr)</label><input type="number" id="ssMc" style="width:110px" value="1000"></div>
+    <button onclick="ssRun()">Run scan</button>
+    <button class="ghost" onclick="ssDownload('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="ssDownload('csv')">Download CSV</button>
+    <button class="ghost" onclick="saveRun('ss')">💾 Save run</button>
+  </div>
+  <div class="status" id="ssStatus">Example: RSI hits 80, then within 10 bars Stoch drops to 20 — what did the share do over the next 12 bars? Scans every share above the mcap floor across its full history.</div>
+  <div class="row" id="ssSummary" style="margin-top:10px;gap:22px"></div>
+  <div class="tblwrap" style="max-height:520px"><table id="ssTbl"></table></div>
+</div>
+
+<!-- SHORT STRATEGY: BLOW-OFF SHORT (F&O) -->
+<div class="card hidden" id="pane-sh">
+  <div class="section-head">Blow-off Short — F&O shares only</div>
+  <div class="row">
+    <div><label>Monthly RSI ≥</label><input type="number" id="shMrsi" style="width:90px" value="80"></div>
+    <div><label>Up at least (×) since then</label><input type="number" id="shMult" style="width:90px" value="6" step="0.5"></div>
+    <div><label>Then 2-Day RSI ≥</label><input type="number" id="shDrsi" style="width:90px" value="75"></div>
+    <div><label>Then price rises ≥ %</label><input type="number" id="shRise" style="width:90px" value="50"></div>
+    <div><label>Track next (2-day bars)</label><input type="number" id="shFwd" style="width:90px" value="12"></div>
+    <button onclick="shRun()">Run scan</button>
+    <button class="ghost" onclick="shDownload('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="shDownload('csv')">Download CSV</button>
+    <button class="ghost" onclick="saveRun('sh')">💾 Save run</button>
+  </div>
+  <div class="status" id="shStatus">Sequence: monthly RSI first crosses the level at price P0 → stock multiplies to ≥ ×P0 → then 2-day RSI crosses its level at price P → price climbs the extra % above P (blow-off) → SHORT there. Universe: current F&O stocks.</div>
+  <div class="row" id="shSummary" style="margin-top:10px;gap:22px"></div>
+  <div class="tblwrap" style="max-height:520px"><table id="shTbl"></table></div>
+</div>
+
+<!-- SAVED RUNS -->
+<div class="card hidden" id="pane-sr">
+  <div class="section-head">Saved Runs</div>
+  <div class="row">
+    <button class="ghost" onclick="connectSaveFolder()">📂 Connect MEGA-synced folder</button>
+    <button class="ghost" onclick="document.getElementById('srFile').click()">📄 Open a run file…</button>
+    <input type="file" id="srFile" accept=".json" style="display:none" onchange="loadRunFile(this.files[0])">
+  </div>
+  <div class="status" id="srStatus">Saved runs live in this browser AND, once you connect a folder inside your MEGA-synced Data folder (e.g. Data\saved_runs), every 💾 Save also writes the Excel + run file there — MEGA uploads them automatically.</div>
+  <div class="tblwrap"><table id="srTbl"></table></div>
 </div>
 
 <!-- CHART -->
@@ -639,11 +695,12 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','st','mc','sx','chart','screener','analyse','export'];
+const ALLPANES=['ac','dl','mm','st','mc','sx','ss','sh','sr','chart','screener','analyse','export'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
   document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open'));
+  if(p==='sr')try{renderSavedRuns();}catch(e){}
   window.scrollTo({top:0});
 }
 document.querySelectorAll('#mainNav .nav-item').forEach(item=>{
@@ -1200,7 +1257,8 @@ function makeStrategy(P,fixedN,title,opts){
                           :[l.month,'— no change —','','','','','']));
       const ws4=XLSX.utils.aoa_to_sheet(log); ws4['!cols']=[{wch:10},{wch:15},{wch:11},{wch:15},{wch:11},{wch:11},{wch:12}];
       XLSX.utils.book_append_sheet(wb,ws4,'Share In-Out Log');
-      XLSX.writeFile(wb,`${P==='mc'?'multi':'one'}_change_strategy_${S.screenDate}_to_${S.month}.xlsx`);
+      const fname=`${P==='mc'?'multi':P==='ac'?'all':P==='sx'?'sector':'one'}_change_strategy_${S.screenDate}_to_${S.month}.xlsx`;
+      if(window.__wbSink)window.__wbSink(wb,fname); else XLSX.writeFile(wb,fname);
     }catch(e){alert('Download failed: '+e.message);}
   };
 
@@ -1630,6 +1688,394 @@ async function drawChart(){
     const cv=document.getElementById(id);
     if(cv)cv.onmouseleave=()=>{CHX.idx=null;redrawPanels();};
   });
+}
+
+/* ============ stoch strategy: rsi + stoch reversal ============ */
+let SSRES=[], SSRUNNING=false;
+async function ssRun(){
+  if(SSRUNNING)return;
+  if(!MANIFEST){setS('ssStatus','Not connected to data yet.','warn');return;}
+  const R=+document.getElementById('ssRsi').value, S=+document.getElementById('ssStoch').value;
+  const N=Math.max(1,+document.getElementById('ssWin').value||10);
+  const F=Math.max(1,+document.getElementById('ssFwd').value||12);
+  const tf=document.getElementById('ssTf').value;
+  const mc=+document.getElementById('ssMc').value||0;
+  SSRUNNING=true; SSRES=[];
+  try{
+    setS('ssStatus','building universe…','');
+    const dates=await getScanDates();
+    const sd=dates&&dates.length?dates[dates.length-1]:null;
+    if(!sd){setS('ssStatus','Scan index unavailable.','warn');SSRUNNING=false;return;}
+    const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
+      .filter(r=>r.mcap_cr!=null&&r.mcap_cr>=mc)
+      .sort((a,b)=>b.mcap_cr-a.mcap_cr).slice(0,800).map(r=>r.symbol);
+    let done=0;
+    const scanSym=async sym=>{
+      try{
+        const rows=resample(await loadSeries('eq',sym),tf);
+        for(let i=1;i<rows.length;i++){
+          const r0=rows[i];
+          if(r0.rsi14!=null&&r0.rsi14>=R&&(rows[i-1].rsi14==null||rows[i-1].rsi14<R)){
+            for(let j=i+1;j<=Math.min(i+N,rows.length-1);j++){
+              const sk=rows[j].stoch_k;
+              if(sk!=null&&sk<=S){
+                const sig=rows[j], lim=Math.min(j+F,rows.length-1);
+                let ret=null,mu=null,md=null,open=j+F>rows.length-1;
+                if(lim>j){
+                  let hi=-1e18,lo=1e18;
+                  for(let k2=j+1;k2<=lim;k2++){hi=Math.max(hi,rows[k2].high??rows[k2].close);lo=Math.min(lo,rows[k2].low??rows[k2].close);}
+                  ret=(rows[lim].close-sig.close)/sig.close*100;
+                  mu=(hi-sig.close)/sig.close*100; md=(lo-sig.close)/sig.close*100;
+                }
+                SSRES.push({sym,setup:rows[i].date,sig:sig.date,rsi:r0.rsi14,stoch:sk,
+                  price:sig.close,ret,mu,md,open,end:rows[lim].date});
+                i=j+F; break;
+              }
+            }
+          }
+        }
+      }catch(e){}
+      done++;
+      if(done%15===0)setS('ssStatus',`scanning… ${done}/${uni.length} shares · ${SSRES.length} signals found`,'');
+    };
+    const pool=8; let idx=0;
+    await Promise.all(Array.from({length:pool},async()=>{
+      while(idx<uni.length){const my=uni[idx++]; await scanSym(my);}
+    }));
+    SSRES.sort((a,b)=>b.sig.localeCompare(a.sig));
+    ssRender(R,S,N,F,tf);
+  }finally{SSRUNNING=false;}
+}
+function ssRender(R,S,N,F,tf){
+  const closed=SSRES.filter(r=>!r.open&&r.ret!=null);
+  const wins=closed.filter(r=>r.ret>0).length;
+  const avg=closed.length?closed.reduce((s,r)=>s+r.ret,0)/closed.length:0;
+  const avgUp=closed.length?closed.reduce((s,r)=>s+(r.mu||0),0)/closed.length:0;
+  const avgDn=closed.length?closed.reduce((s,r)=>s+(r.md||0),0)/closed.length:0;
+  const best=closed.length?closed.reduce((a,b)=>a.ret>b.ret?a:b):null;
+  const worst=closed.length?closed.reduce((a,b)=>a.ret<b.ret?a:b):null;
+  const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+  document.getElementById('ssSummary').innerHTML=
+    box('Signals',SSRES.length)+
+    box('Win rate',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
+    box('Avg return',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'pos':'neg')+
+    box('Avg max up','+'+avgUp.toFixed(2)+'%','pos')+
+    box('Avg max down',avgDn.toFixed(2)+'%','neg')+
+    (best?box('Best',`${best.sym} +${best.ret.toFixed(1)}%`,'pos'):'')+
+    (worst?box('Worst',`${worst.sym} ${worst.ret.toFixed(1)}%`,'neg'):'');
+  const tfN=tf==='D'?'daily':tf==='W'?'weekly':'monthly';
+  const t=document.getElementById('ssTbl');
+  t.innerHTML=`<tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI ≥${R} on</th><th>Stoch ≤${S} on</th>`+
+    `<th>RSI</th><th>Stoch</th><th>Price @ signal</th><th>After ${F} bars</th><th>Return</th><th>Max up</th><th>Max down</th></tr>`+
+    SSRES.slice(0,800).map((r,i)=>{
+      const nm=NAMEMAP[r.sym]||'';
+      const cls=r.ret==null?'':(r.ret>=0?'pos':'neg');
+      return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.sym}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
+        `<td>${r.setup}</td><td>${r.sig}</td><td>${fmt(r.rsi)}</td><td>${fmt(r.stoch)}</td><td>${fmt(r.price)}</td>`+
+        `<td>${r.end}${r.open?' <span style="color:var(--amber)">(open)</span>':''}</td>`+
+        `<td class="${cls}">${r.ret==null?'<span style="color:var(--amber)">⚡ just triggered</span>':(r.ret>=0?'+':'')+fmt(r.ret)+'%'}</td>`+
+        `<td class="pos">${r.mu==null?'—':'+'+fmt(r.mu)+'%'}</td>`+
+        `<td class="neg">${r.md==null?'—':fmt(r.md)+'%'}</td></tr>`;
+    }).join('')+
+    (SSRES.length>800?`<tr><td colspan="11" style="text-align:center;color:var(--muted)">showing first 800 of ${SSRES.length} — download for all</td></tr>`:'');
+  setS('ssStatus',`${SSRES.length} signals across history (${tfN}; universe = latest mcap filter). Sorted newest first.`,SSRES.length?'ok':'warn');
+}
+function ssDownload(kind){
+  try{
+    if(!SSRES.length){setS('ssStatus','Run a scan first.','warn');return;}
+    const header=['#','Symbol','Company Name','RSI setup date','Stoch signal date','RSI','Stoch %K','Price @ signal','End date','Open?','Return %','Max up %','Max down %'];
+    const rows=SSRES.map((r,i)=>[i+1,r.sym,NAMEMAP[r.sym]||'',r.setup,r.sig,r.rsi??'',r.stoch??'',r.price??'',r.end,r.open?'yes':'',
+      r.ret==null?'':+r.ret.toFixed(2),r.mu==null?'':+r.mu.toFixed(2),r.md==null?'':+r.md.toFixed(2)]);
+    if(kind==='xlsx'){
+      const wb=XLSX.utils.book_new();
+      const ws=XLSX.utils.aoa_to_sheet([header].concat(rows));
+      ws['!cols']=header.map((h,i)=>({wch:i===2?30:13}));
+      XLSX.utils.book_append_sheet(wb,ws,'Signals');
+      if(window.__wbSink)window.__wbSink(wb,'rsi_stoch_reversal.xlsx'); else XLSX.writeFile(wb,'rsi_stoch_reversal.xlsx');
+    } else {
+      const esc=v=>{v=String(v);return v.includes(',')?'"'+v+'"':v;};
+      dl(new Blob([[header.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),'rsi_stoch_reversal.csv');
+    }
+    setS('ssStatus',`Exported ${SSRES.length} signals.`,'ok');
+  }catch(e){setS('ssStatus','Download failed: '+e.message,'warn');}
+}
+
+/* ============ short strategy: blow-off short (F&O) ============ */
+const FOLIST=['ADANIENSOL','360ONE','ABB','ADANIPORTS','ABCAPITAL','AMBER','ASIANPAINT','ADANIENT','BAJAJFINSV','APLAPOLLO','BAJAJHLDNG','BAJFINANCE','ADANIGREEN','BHARTIARTL','BOSCHLTD','BRITANNIA','ALKEM','CAMS','CDSL','COALINDIA','AMBUJACEM','COLPAL','COFORGE','CONCOR','DABUR','ANGELONE','AUROPHARMA','DIVISLAB','APOLLOHOSP','BDL','DLF','DMART','BIOCON','DRREDDY','BSE','EICHERMOT','ETERNAL','FORTIS','GAIL','BANKINDIA','GODREJCP','CGPOWER','HCLTECH','GODREJPROP','BEL','BHEL','BLUESTARCO','ICICIPRULI','ADANIPOWER','INDHOTEL','CUMMINSIND','INDUSINDBK','CHOLAFIN','IEX','CIPLA','JIOFIN','JSWENERGY','KAYNES','KEI','INFY','KPITTECH','JSWSTEEL','LICHSGFIN','GLENMARK','LODHA','GMRAIRPORT','CROMPTON','KALYANKJIL','ASHOKLEY','M&M','ASTRAL','DALBHARAT','MARICO','HDFCBANK','HDFCLIFE','NESTLEIND','LAURUSLABS','BAJAJ-AUTO','FEDERALBNK','OBEROIRLTY','LTM','ICICIGI','FORCEMOT','IDFCFIRSTB','MANAPPURAM','PAYTM','INDIGO','IREDA','PFC','PGEL','PNB','POLYCAB','POWERINDIA','PRESTIGE','RADICO','RECLTD','SAIL','SBILIFE','SHREECEM','SOLARINDS','SUPREMEIND','SWIGGY','TATACONSUM','TATAELXSI','PHOENIXLTD','TATAPOWER','TATASTEEL','TVSMOTOR','UNIONBANK','VEDL','PIIND','VMM','BANKBARODA','BHARATFORG','GRASIM','GVT&D','BPCL','SUNPHARMA','HAVELLS','SUZLON','TCS','DIXON','TITAN','WIPRO','HEROMOTOCO','HINDPETRO','HYUNDAI','ICICIBANK','INDUSTOWER','IRFC','JINDALSTEL','LTF','MANKIND','MARUTI','MOTHERSON','MOTILALOFS','HINDALCO','MPHASIS','NAM-INDIA','NATIONALUM','NBCC','HINDZINC','NYKAA','OFSS','OIL','ITC','ONGC','IDEA','PAGEIND','PERSISTENT','PNBHOUSING','JUBLFOOD','POWERGRID','PREMIERENE','LT','LICI','RBLBANK','RELIANCE','MAXHEALTH','SBIN','MCX','SONACOMS','MFSL','MUTHOOTFIN','NAUKRI','SRF','NMDC','TECHM','TIINDIA','TMPV','ULTRACEMCO','PETRONET','SIEMENS','PATANJALI','TORNTPHARM','UNITDSPR','UNOMINDA','UPL','YESBANK','BANDHANBNK','VBL','WAAREEENER','COCHINSHIP','INOXWIND','KOTAKBANK','LUPIN','DELHIVERY','AXISBANK','POLICYBZR','HDFCAMC','INDIANB','HAL','KFINTECH','HINDUNILVR','MAZDOCK','NHPC','NTPC','PIDILITIND','RVNL','ZYDUSLIFE','GODFRYPHLP','VOLTAS','CANBK','AUBANK','TRENT','SBICARD','SHRIRAMFIN','IOC'];
+let SHRES=[], SHRUNNING=false;
+function bars2D(daily){
+  const out=[];
+  for(let i=0;i<daily.length;i+=2){
+    const a=daily[i], b=daily[i+1]||daily[i];
+    out.push({date:b.date,open:a.open,high:Math.max(a.high??a.close,b.high??b.close),
+      low:Math.min(a.low??a.close,b.low??b.close),close:b.close});
+  }
+  const rsi=rsiCalc(out.map(r=>r.close));
+  out.forEach((r,i)=>r.rsi14=rsi[i]);
+  return out;
+}
+async function shRun(){
+  if(SHRUNNING)return;
+  if(!MANIFEST){setS('shStatus','Not connected to data yet.','warn');return;}
+  const A=+document.getElementById('shMrsi').value, B=+document.getElementById('shDrsi').value;
+  const MULT=Math.max(1,+document.getElementById('shMult').value||6);
+  const X=+document.getElementById('shRise').value, K=Math.max(1,+document.getElementById('shFwd').value||12);
+  SHRUNNING=true; SHRES=[];
+  try{
+    let done=0;
+    const scan=async sym=>{
+      try{
+        const daily=await loadSeries('eq',sym);
+        const mo=resample(daily,'M');
+        let qd=null,P0=null;
+        for(const m of mo){ if(m.rsi14!=null&&m.rsi14>=A){qd=m.date;P0=m.close;break;} }
+        if(qd&&P0){
+          const b2=bars2D(daily);
+          // condition 2: stock must be up at least MULT× from the monthly-trigger price
+          let sixDate=null;
+          for(const r2 of b2){ if(r2.date>=qd&&(r2.high??r2.close)>=P0*MULT){sixDate=r2.date;break;} }
+          if(sixDate)
+          for(let b=1;b<b2.length;b++){
+            const r=b2[b];
+            if(r.date>=sixDate&&r.rsi14!=null&&r.rsi14>=B&&(b2[b-1].rsi14==null||b2[b-1].rsi14<B)){
+              const Pb=r.close, target=Pb*(1+X/100);
+              for(let c=b+1;c<b2.length;c++){
+                if((b2[c].high??b2[c].close)>=target){
+                  const lim=Math.min(c+K,b2.length-1), open=c+K>b2.length-1;
+                  let ret=null,fall=null,rise=null;
+                  if(lim>c){
+                    let hi=-1e18,lo=1e18;
+                    for(let k2=c+1;k2<=lim;k2++){hi=Math.max(hi,b2[k2].high??b2[k2].close);lo=Math.min(lo,b2[k2].low??b2[k2].close);}
+                    ret=(b2[lim].close-target)/target*100;
+                    fall=(lo-target)/target*100; rise=(hi-target)/target*100;
+                  }
+                  SHRES.push({sym,mDate:qd,P0,sixDate,bDate:r.date,Pb,entryDate:b2[c].date,entry:target,
+                    end:b2[lim].date,ret,fall,rise,open});
+                  b=c+K; break;
+                }
+              }
+            }
+          }
+        }
+      }catch(e){}
+      done++;
+      if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${FOLIST.length} · ${SHRES.length} signals`,'');
+    };
+    const pool=8; let idx=0;
+    await Promise.all(Array.from({length:pool},async()=>{
+      while(idx<FOLIST.length){const s=FOLIST[idx++]; await scan(s);}
+    }));
+    SHRES.sort((a,b)=>b.entryDate.localeCompare(a.entryDate));
+    shRender(A,B,X,K);
+  }finally{SHRUNNING=false;}
+}
+function shRender(A,B,X,K){
+  const closed=SHRES.filter(r=>!r.open&&r.ret!=null);
+  const wins=closed.filter(r=>r.ret<0).length;   // short wins when price falls
+  const avgPnl=closed.length?-closed.reduce((s,r)=>s+r.ret,0)/closed.length:0;
+  const avgFall=closed.length?closed.reduce((s,r)=>s+(r.fall||0),0)/closed.length:0;
+  const avgRise=closed.length?closed.reduce((s,r)=>s+(r.rise||0),0)/closed.length:0;
+  const best=closed.length?closed.reduce((a,b)=>a.ret<b.ret?a:b):null;
+  const worst=closed.length?closed.reduce((a,b)=>a.ret>b.ret?a:b):null;
+  const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+  document.getElementById('shSummary').innerHTML=
+    box('Signals',SHRES.length)+
+    box('Short win rate',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
+    box('Avg short P&L',(avgPnl>=0?'+':'')+avgPnl.toFixed(2)+'%',avgPnl>=0?'pos':'neg')+
+    box('Avg deepest fall',avgFall.toFixed(2)+'%','pos')+
+    box('Avg worst rise','+'+avgRise.toFixed(2)+'%','neg')+
+    (best?box('Best short',`${best.sym} ${(-best.ret).toFixed(1)}%`,'pos'):'')+
+    (worst?box('Worst short',`${(-worst.ret).toFixed(1)}% ${worst.sym}`,'neg'):'');
+  const t=document.getElementById('shTbl');
+  t.innerHTML=`<tr><th>#</th><th style="text-align:left">Symbol</th><th>M-RSI ≥${A} on (P0)</th><th>≥${document.getElementById('shMult').value}× on</th><th>2D-RSI ≥${B} on</th>`+
+    `<th>Price @2D trigger</th><th>Short entry (+${X}%) on</th><th>Entry price</th><th>After ${K} bars</th>`+
+    `<th>Short P&L</th><th>Deepest fall</th><th>Worst rise</th></tr>`+
+    SHRES.slice(0,800).map((r,i)=>{
+      const nm=NAMEMAP[r.sym]||'';
+      const pnl=r.ret==null?null:-r.ret;
+      const cls=pnl==null?'':(pnl>=0?'pos':'neg');
+      return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.sym}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
+        `<td>${r.mDate}<br><span style="color:var(--muted);font-size:11px">${fmt(r.P0)}</span></td><td>${r.sixDate||'—'}</td><td>${r.bDate}</td><td>${fmt(r.Pb)}</td><td>${r.entryDate}</td><td>${fmt(r.entry)}</td>`+
+        `<td>${r.end}${r.open?' <span style="color:var(--amber)">(open)</span>':''}</td>`+
+        `<td class="${cls}">${pnl==null?'<span style="color:var(--amber)">⚡ just triggered</span>':(pnl>=0?'+':'')+fmt(pnl)+'%'}</td>`+
+        `<td class="pos">${r.fall==null?'—':fmt(r.fall)+'%'}</td>`+
+        `<td class="neg">${r.rise==null?'—':'+'+fmt(r.rise)+'%'}</td></tr>`;
+    }).join('')+
+    (SHRES.length>800?`<tr><td colspan="12" style="text-align:center;color:var(--muted)">showing first 800 of ${SHRES.length}</td></tr>`:'');
+  setS('shStatus',`${SHRES.length} blow-off short signals across F&O history (2-day bars). Short P&L is positive when price fell after entry.`,SHRES.length?'ok':'warn');
+}
+function shDownload(kind){
+  try{
+    if(!SHRES.length){setS('shStatus','Run a scan first.','warn');return;}
+    const header=['#','Symbol','Company Name','Monthly RSI date','Price P0','Multiplied on','2D RSI date','Trigger price','Short entry date','Entry price','End date','Open?','Short P&L %','Deepest fall %','Worst rise %'];
+    const rows=SHRES.map((r,i)=>[i+1,r.sym,NAMEMAP[r.sym]||'',r.mDate,+r.P0.toFixed(2),r.sixDate||'',r.bDate,+r.Pb.toFixed(2),r.entryDate,+r.entry.toFixed(2),r.end,r.open?'yes':'',
+      r.ret==null?'':+(-r.ret).toFixed(2),r.fall==null?'':+r.fall.toFixed(2),r.rise==null?'':+r.rise.toFixed(2)]);
+    if(kind==='xlsx'){
+      const wb=XLSX.utils.book_new();
+      const ws=XLSX.utils.aoa_to_sheet([header].concat(rows));
+      ws['!cols']=header.map((h,i)=>({wch:i===2?30:13}));
+      XLSX.utils.book_append_sheet(wb,ws,'Short Signals');
+      if(window.__wbSink)window.__wbSink(wb,'blowoff_short.xlsx'); else XLSX.writeFile(wb,'blowoff_short.xlsx');
+    } else {
+      const esc=v=>{v=String(v);return v.includes(',')?'"'+v+'"':v;};
+      dl(new Blob([[header.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),'blowoff_short.csv');
+    }
+    setS('shStatus',`Exported ${SHRES.length} signals.`,'ok');
+  }catch(e){setS('shStatus','Download failed: '+e.message,'warn');}
+}
+
+/* ============ saved runs ============ */
+const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',sx:'Sector Strategy',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
+// ---- MEGA-synced folder handle (persisted in IndexedDB) ----
+function idbKV(){return new Promise((res,rej)=>{const q=indexedDB.open('btp',1);
+  q.onupgradeneeded=()=>q.result.createObjectStore('kv');
+  q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error);});}
+async function kvSet(k,v){const db=await idbKV();return new Promise((res,rej)=>{
+  const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);
+  tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}
+async function kvGet(k){const db=await idbKV();return new Promise((res,rej)=>{
+  const rq=db.transaction('kv').objectStore('kv').get(k);
+  rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});}
+async function connectSaveFolder(){
+  try{
+    const h=await window.showDirectoryPicker({mode:'readwrite'});
+    await kvSet('runDir',h);
+    setS('srStatus','Folder connected ✓ — every 💾 Save now also writes the Excel + run file there (and MEGA syncs it).','ok');
+  }catch(e){}
+}
+async function getRunDir(){
+  try{
+    const h=await kvGet('runDir');
+    if(!h)return null;
+    if(await h.queryPermission({mode:'readwrite'})==='granted')return h;
+    if(await h.requestPermission({mode:'readwrite'})==='granted')return h;
+  }catch(e){}
+  return null;
+}
+async function folderSave(run){
+  const dir=await getRunDir();
+  if(!dir)return false;
+  const safe=run.name.replace(/[^\w\- ]+/g,'_').slice(0,60);
+  // run file (reopenable via “Open a run file…”)
+  let fh=await dir.getFileHandle(safe+'.json',{create:true});
+  let w=await fh.createWritable(); await w.write(JSON.stringify(run)); await w.close();
+  // excel report via sink
+  await new Promise(resolve=>{
+    window.__wbSink=async(wb,fname)=>{
+      try{
+        const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+        const xh=await dir.getFileHandle(safe+'.xlsx',{create:true});
+        const xw=await xh.createWritable(); await xw.write(buf); await xw.close();
+      }catch(e){}
+      window.__wbSink=null; resolve();
+    };
+    try{
+      if(['st','mc','ac','sx'].includes(run.type))STRATS[run.type].download();
+      else if(run.type==='ss')ssDownload('xlsx');
+      else if(run.type==='sh')shDownload('xlsx');
+      else {window.__wbSink=null;resolve();}
+    }catch(e){window.__wbSink=null;resolve();}
+  });
+  return true;
+}
+function loadRunFile(file){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const run=JSON.parse(r.result);
+      if(!run.type||!run.payload){alert('Not a valid run file.');return;}
+      openRunObj(run);
+    }catch(e){alert('Could not read that file.');}
+  };
+  r.readAsText(file);
+}
+function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]');}catch(e){return [];}}
+function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
+function saveRun(t){
+  let payload=null;
+  if(['st','mc','ac','sx'].includes(t)){
+    const S=STRATS[t].S;
+    if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
+    payload=S;
+  } else if(t==='ss'){
+    if(!SSRES.length){alert('Run the scan first.');return;}
+    payload={res:SSRES,R:+document.getElementById('ssRsi').value,S:+document.getElementById('ssStoch').value,
+      N:+document.getElementById('ssWin').value,F:+document.getElementById('ssFwd').value,
+      tf:document.getElementById('ssTf').value,mc:+document.getElementById('ssMc').value};
+  } else if(t==='sh'){
+    if(!SHRES.length){alert('Run the scan first.');return;}
+    payload={res:SHRES,A:+document.getElementById('shMrsi').value,B:+document.getElementById('shDrsi').value,
+      M:+document.getElementById('shMult').value,X:+document.getElementById('shRise').value,K:+document.getElementById('shFwd').value};
+  } else return;
+  const name=prompt('Name this run:',`${RUNLABELS[t]} · ${new Date().toISOString().slice(0,10)}`);
+  if(name==null)return;
+  const runs=getRuns();
+  runs.unshift({id:Date.now(),name:name||RUNLABELS[t],type:t,saved:new Date().toLocaleString(),payload});
+  try{putRuns(runs);}catch(e){alert('Browser storage is full — delete some saved runs first (Tools → Saved Runs).');}
+  folderSave(runs[0]).then(ok=>{
+    alert(ok?'Saved ✓  Excel + run file written to your MEGA-synced folder, and listed under Tools → Saved Runs.'
+            :'Saved ✓ in this browser (Tools → Saved Runs). Tip: connect your MEGA-synced folder there to also save the Excel to MEGA.');
+  });
+}
+function renderSavedRuns(){
+  const runs=getRuns();
+  const t=document.getElementById('srTbl');
+  if(!runs.length){t.innerHTML='<tr><td style="color:var(--muted)">No saved runs yet — press 💾 Save run after any back-test or scan.</td></tr>';return;}
+  t.innerHTML='<tr><th style="text-align:left">Name</th><th style="text-align:left">Type</th><th>Saved on</th><th></th></tr>'+
+    runs.map(r=>`<tr><td style="text-align:left"><b>${r.name}</b></td><td style="text-align:left">${RUNLABELS[r.type]||r.type}</td>`+
+      `<td>${r.saved}</td><td style="white-space:nowrap">`+
+      `<button class="ghost mini" onclick="openRun(${r.id})">▶ Open</button> `+
+      `<button class="ghost mini" onclick="runExcel(${r.id})">⬇ Excel</button> `+
+      `<button class="ghost mini" onclick="delRun(${r.id})">✕</button></td></tr>`).join('');
+}
+function findRun(id){return getRuns().find(r=>r.id===id);}
+function openRun(id){
+  const r=findRun(id); if(!r)return;
+  openRunObj(r);
+}
+function openRunObj(r){
+  const t=r.type;
+  if(['st','mc','ac','sx'].includes(t)){
+    STRATS[t].S=r.payload;
+    document.getElementById(t+'Setup').classList.add('hidden');
+    document.getElementById(t+'Run').classList.remove('hidden');
+    document.getElementById(t+'SwapRow').classList.add('hidden');
+    const nb=document.getElementById(t+'NextBtn'); if(nb)nb.disabled=false;
+    STRATS[t].render('viewing saved run — '+r.name);
+    showPane(t);
+  } else if(t==='ss'){
+    const p=r.payload; SSRES=p.res;
+    document.getElementById('ssRsi').value=p.R; document.getElementById('ssStoch').value=p.S;
+    document.getElementById('ssWin').value=p.N; document.getElementById('ssFwd').value=p.F;
+    document.getElementById('ssTf').value=p.tf; document.getElementById('ssMc').value=p.mc;
+    ssRender(p.R,p.S,p.N,p.F,p.tf); showPane('ss');
+  } else if(t==='sh'){
+    const p=r.payload; SHRES=p.res;
+    document.getElementById('shMrsi').value=p.A; document.getElementById('shDrsi').value=p.B;
+    document.getElementById('shMult').value=p.M; document.getElementById('shRise').value=p.X;
+    document.getElementById('shFwd').value=p.K;
+    shRender(p.A,p.B,p.X,p.K); showPane('sh');
+  }
+}
+function runExcel(id){
+  const r=findRun(id); if(!r)return;
+  const t=r.type;
+  if(['st','mc','ac','sx'].includes(t)){
+    const prev=STRATS[t].S; STRATS[t].S=r.payload;
+    try{STRATS[t].download();}finally{STRATS[t].S=prev;}
+  } else if(t==='ss'){
+    const prev=SSRES; SSRES=r.payload.res;
+    try{ssDownload('xlsx');}finally{SSRES=prev;}
+  } else if(t==='sh'){
+    const prev=SHRES; SHRES=r.payload.res;
+    try{shDownload('xlsx');}finally{SHRES=prev;}
+  }
+}
+function delRun(id){
+  if(!confirm('Delete this saved run?'))return;
+  putRuns(getRuns().filter(r=>r.id!==id));
+  renderSavedRuns();
 }
 
 /* ============ watchlist ============ */
