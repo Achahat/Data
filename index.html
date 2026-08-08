@@ -327,6 +327,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="sxDate"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="sxAmt" style="width:120px" value="100000"></div>
       <div><label>RSI (monthly) min</label><input type="number" id="sxRsi" style="width:100px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="sxMc" style="width:110px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="sxNextM"></div>
       <button onclick="STRATS.sx.screen()">Load shares</button>
       <button class="ghost hidden" id="sxStartBtn" onclick="STRATS.sx.start()">Start strategy ▶</button>
@@ -387,6 +388,7 @@ a{color:var(--accent);}
   <div class="row">
     <div><label>RSI reaches ≥</label><input type="number" id="ssRsi" style="width:90px" value="80"></div>
     <div><label>Then Stoch %K falls ≤</label><input type="number" id="ssStoch" style="width:90px" value="20"></div>
+    <div><label>%K length</label><input type="number" id="ssKlen" style="width:80px" value="14" min="2"></div>
     <div><label>Within (bars)</label><input type="number" id="ssWin" style="width:80px" value="10"></div>
     <div><label>Then track next (bars)</label><input type="number" id="ssFwd" style="width:80px" value="12"></div>
     <div><label>Timeframe</label>
@@ -406,17 +408,21 @@ a{color:var(--accent);}
 <div class="card hidden" id="pane-sh">
   <div class="section-head">Blow-off Short — F&O shares only</div>
   <div class="row">
-    <div><label>Monthly RSI ≥</label><input type="number" id="shMrsi" style="width:90px" value="80"></div>
-    <div><label>Up at least (×) since then</label><input type="number" id="shMult" style="width:90px" value="6" step="0.5"></div>
-    <div><label>Then 2-Day RSI ≥</label><input type="number" id="shDrsi" style="width:90px" value="75"></div>
-    <div><label>Then price rises ≥ %</label><input type="number" id="shRise" style="width:90px" value="50"></div>
-    <div><label>Track next (2-day bars)</label><input type="number" id="shFwd" style="width:90px" value="12"></div>
+    <div><label>Monthly RSI crosses ≥</label><input type="number" id="shMrsi" style="width:90px" value="80"></div>
+    <div><label>Reset if monthly RSI closes <</label><input type="number" id="shFloor" style="width:90px" value="50"></div>
+    <div><label>Entry must be ≥ (× P0)</label><input type="number" id="shMult" style="width:80px" value="5" step="0.5"></div>
+    <div><label>2-Day RSI crosses ≥</label><input type="number" id="shDrsi" style="width:90px" value="75"></div>
+    <div><label>Rise to short %</label><input type="number" id="shRise" style="width:80px" value="50"></div>
+    <div><label>Stop-loss %</label><input type="number" id="shStop" style="width:80px" value="20"></div>
+    <div><label>Take-profit fall %</label><input type="number" id="shTP" style="width:80px" value="40"></div>
+    <div><label>Entries from</label><input type="date" id="shFrom"></div>
+    <div><label>to</label><input type="date" id="shTo"></div>
     <button onclick="shRun()">Run scan</button>
     <button class="ghost" onclick="shDownload('xlsx')">Download Excel</button>
     <button class="ghost" onclick="shDownload('csv')">Download CSV</button>
     <button class="ghost" onclick="saveRun('sh')">💾 Save run</button>
   </div>
-  <div class="status" id="shStatus">Sequence: monthly RSI first crosses the level at price P0 → stock multiplies to ≥ ×P0 → then 2-day RSI crosses its level at price P → price climbs the extra % above P (blow-off) → SHORT there. Universe: current F&O stocks.</div>
+  <div class="status" id="shStatus">Monthly RSI crosses the level → P0. Journey must never close a month below the floor (else reset, wait for a fresh cross). 2-Day RSI crosses its level at price P → short when price reaches P × (1+rise%), only if that level ≥ ×P0. Cover on first monthly close below the floor, or at +stop% against you. Universe: current F&O stocks.</div>
   <div class="row" id="shSummary" style="margin-top:10px;gap:22px"></div>
   <div class="tblwrap" style="max-height:520px"><table id="shTbl"></table></div>
 </div>
@@ -1319,7 +1325,9 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
     el('sxBrowseHead').hidden=false;
     const picked=new Set(PICKED.map(p=>p.sym));
     const rv=el('sxRsi').value, rmin=rv===''?null:+rv;
-    const ranked=[...SCAN.rows].filter(r=>r.rsi_m!=null&&(rmin==null||r.rsi_m>=rmin)).sort((a,b)=>b.rsi_m-a.rsi_m).slice(0,300);
+    const mv=el('sxMc').value, mmin=mv===''?null:+mv;
+    const ranked=[...SCAN.rows].filter(r=>r.rsi_m!=null&&(rmin==null||r.rsi_m>=rmin)
+      &&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin))).sort((a,b)=>b.rsi_m-a.rsi_m).slice(0,300);
     el('sxBrowseTbl').innerHTML='<tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI (monthly)</th><th>Close</th><th>Mcap ₹ cr</th><th></th></tr>'+
       ranked.map((r,i)=>{
         const nm=NAMEMAP[r.symbol]||'';
@@ -1357,6 +1365,8 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
     if(!PICKED.length){setS('sxSetupStatus','Add at least one share.','warn');return;}
     const S=sx.S={screenDate:SCAN.date,rmin:null,mmin:null};
     S.amt=+el('sxAmt').value||100000;
+    S.rminF=el('sxRsi').value===''?null:+el('sxRsi').value;
+    S.mminF=el('sxMc').value===''?null:+el('sxMc').value;
     let buyRows=SCAN.rows, month=SCAN.date.slice(0,7), buyDate=SCAN.date;
     if(el('sxNextM').checked){
       const [y,m]=month.split('-').map(Number);
@@ -1423,7 +1433,9 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
     S.series.push({month:nm,value:S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0)});
     pushSec(nm);
     const held=new Set(S.holdings.map(h=>h.sym));
-    sx.cands=sc.rows.filter(r=>r.rsi_m!=null&&!held.has(r.symbol)).sort((a,b)=>b.rsi_m-a.rsi_m);
+    sx.cands=sc.rows.filter(r=>r.rsi_m!=null&&!held.has(r.symbol)
+      &&(S.rminF==null||r.rsi_m>=S.rminF)
+      &&(S.mminF==null||(r.mcap_cr!=null&&r.mcap_cr>=S.mminF))).sort((a,b)=>b.rsi_m-a.rsi_m);
     refreshDatalist();
     nextRowIdx=0;
     el('sxSwaps').innerHTML='';
@@ -1518,14 +1530,29 @@ async function acRun(){
     const exits=S.holdings.filter(h=>!targetSet.has(h.sym));
     const entries=top.filter(r=>!held.has(r.symbol));
     const k=Math.min(exits.length,entries.length);
+    // anti-concentration: equal weight = V/N; if a sale exceeds 1.5x equal weight (6% for N=25),
+    // rebuy at equal weight (4%) and spread the excess equally over the rest of the portfolio
+    const V=S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0);
+    const eq=V/topN, cap=eq*1.5;
     for(let j=0;j<k;j++){
       const h=exits[j], inRow=entries[j];
       const proceeds=h.units*h.lastClose;
+      let buyAmt=proceeds, excess=0;
+      if(proceeds>cap){buyAmt=eq; excess=proceeds-eq;}
       S.log.push({month:mth,out:h.sym,outBuy:h.buyPrice,outSell:h.lastClose,
-        pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:inRow.symbol,inPrice:inRow.close,amount:proceeds});
+        pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:inRow.symbol,inPrice:inRow.close,
+        amount:buyAmt,excess:excess>0?excess:undefined});
       S.holdings.splice(S.holdings.indexOf(h),1);
-      S.holdings.push({sym:inRow.symbol,units:proceeds/inRow.close,buyPrice:inRow.close,
-        cost:proceeds,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:mth});
+      const nh={sym:inRow.symbol,units:buyAmt/inRow.close,buyPrice:inRow.close,
+        cost:buyAmt,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:mth};
+      if(excess>0){
+        const others=S.holdings.filter(h2=>h2.lastClose>0);
+        if(others.length){
+          const per=excess/others.length;
+          others.forEach(h2=>{h2.units+=per/h2.lastClose; h2.cost+=per;});
+        } else nh.units+=excess/inRow.close, nh.cost+=excess;
+      }
+      S.holdings.push(nh);
     }
     S.series.push({month:mth,value:S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0)});
   }
@@ -1700,6 +1727,7 @@ async function ssRun(){
   const F=Math.max(1,+document.getElementById('ssFwd').value||12);
   const tf=document.getElementById('ssTf').value;
   const mc=+document.getElementById('ssMc').value||0;
+  const KL=Math.max(2,+document.getElementById('ssKlen').value||14);
   SSRUNNING=true; SSRES=[];
   try{
     setS('ssStatus','building universe…','');
@@ -1712,7 +1740,8 @@ async function ssRun(){
     let done=0;
     const scanSym=async sym=>{
       try{
-        const rows=resample(await loadSeries('eq',sym),tf);
+        let rows=resample(await loadSeries('eq',sym),tf);
+        if(KL!==14){ rows=rows.map(r=>({...r})); stochCalc(rows,KL,3,3); }
         for(let i=1;i<rows.length;i++){
           const r0=rows[i];
           if(r0.rsi14!=null&&r0.rsi14>=R&&(rows[i-1].rsi14==null||rows[i-1].rsi14<R)){
@@ -1766,7 +1795,7 @@ function ssRender(R,S,N,F,tf){
   const tfN=tf==='D'?'daily':tf==='W'?'weekly':'monthly';
   const t=document.getElementById('ssTbl');
   t.innerHTML=`<tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI ≥${R} on</th><th>Stoch ≤${S} on</th>`+
-    `<th>RSI</th><th>Stoch</th><th>Price @ signal</th><th>After ${F} bars</th><th>Return</th><th>Max up</th><th>Max down</th></tr>`+
+    `<th>RSI</th><th>Stoch (${document.getElementById('ssKlen').value},3,3)</th><th>Price @ signal</th><th>After ${F} bars</th><th>Return</th><th>Max up</th><th>Max down</th></tr>`+
     SSRES.slice(0,800).map((r,i)=>{
       const nm=NAMEMAP[r.sym]||'';
       const cls=r.ret==null?'':(r.ret>=0?'pos':'neg');
@@ -1817,9 +1846,13 @@ function bars2D(daily){
 async function shRun(){
   if(SHRUNNING)return;
   if(!MANIFEST){setS('shStatus','Not connected to data yet.','warn');return;}
-  const A=+document.getElementById('shMrsi').value, B=+document.getElementById('shDrsi').value;
-  const MULT=Math.max(1,+document.getElementById('shMult').value||6);
-  const X=+document.getElementById('shRise').value, K=Math.max(1,+document.getElementById('shFwd').value||12);
+  const R1=+document.getElementById('shMrsi').value||80;
+  const FLOOR=+document.getElementById('shFloor').value||50;
+  const MULT=Math.max(1,+document.getElementById('shMult').value||5);
+  const R2=+document.getElementById('shDrsi').value||75;
+  const RISE=(+document.getElementById('shRise').value||50)/100;
+  const STOP=(+document.getElementById('shStop').value||20)/100;
+  const TP=(+document.getElementById('shTP').value||40)/100;
   SHRUNNING=true; SHRES=[];
   try{
     let done=0;
@@ -1827,100 +1860,137 @@ async function shRun(){
       try{
         const daily=await loadSeries('eq',sym);
         const mo=resample(daily,'M');
-        let qd=null,P0=null;
-        for(const m of mo){ if(m.rsi14!=null&&m.rsi14>=A){qd=m.date;P0=m.close;break;} }
-        if(qd&&P0){
-          const b2=bars2D(daily);
-          // condition 2: stock must be up at least MULT× from the monthly-trigger price
-          let sixDate=null;
-          for(const r2 of b2){ if(r2.date>=qd&&(r2.high??r2.close)>=P0*MULT){sixDate=r2.date;break;} }
-          if(sixDate)
-          for(let b=1;b<b2.length;b++){
-            const r=b2[b];
-            if(r.date>=sixDate&&r.rsi14!=null&&r.rsi14>=B&&(b2[b-1].rsi14==null||b2[b-1].rsi14<B)){
-              const Pb=r.close, target=Pb*(1+X/100);
-              for(let c=b+1;c<b2.length;c++){
-                if((b2[c].high??b2[c].close)>=target){
-                  const lim=Math.min(c+K,b2.length-1), open=c+K>b2.length-1;
-                  let ret=null,fall=null,rise=null;
-                  if(lim>c){
-                    let hi=-1e18,lo=1e18;
-                    for(let k2=c+1;k2<=lim;k2++){hi=Math.max(hi,b2[k2].high??b2[k2].close);lo=Math.min(lo,b2[k2].low??b2[k2].close);}
-                    ret=(b2[lim].close-target)/target*100;
-                    fall=(lo-target)/target*100; rise=(hi-target)/target*100;
-                  }
-                  SHRES.push({sym,mDate:qd,P0,sixDate,bDate:r.date,Pb,entryDate:b2[c].date,entry:target,
-                    end:b2[lim].date,ret,fall,rise,open});
-                  b=c+K; break;
+        const b2=bars2D(daily);
+        // monthly events in date order
+        const mev=[];
+        for(let i=0;i<mo.length;i++){
+          const r=mo[i], prev=i>0?mo[i-1].rsi14:null;
+          if(r.rsi14==null)continue;
+          if(r.rsi14>=R1&&(prev==null||prev<R1))mev.push({date:r.date,type:'T1',close:r.close,rsi:r.rsi14});
+          if(r.rsi14<FLOOR)mev.push({date:r.date,type:'LOW',close:r.close,rsi:r.rsi14});
+        }
+        let mi=0;
+        let qualified=false,P0=null,T1=null,windows=[],pos=null;
+        const closeTrade=(exitDate,exitPx,reason)=>{
+          SHRES.push({sym,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
+            entryDate:pos.entryDate,entry:pos.entry,mult:pos.entry/pos.P0,
+            exitDate,exitPx,reason,pnl:(pos.entry-exitPx)/pos.entry*100,open:false});
+          pos=null;
+        };
+        for(let i=0;i<b2.length;i++){
+          const bar=b2[i];
+          // monthly events up to this bar's date
+          while(mi<mev.length&&mev[mi].date<=bar.date){
+            const e=mev[mi++];
+            if(e.type==='T1'&&!qualified){qualified=true;P0=e.close;T1=e.date;windows=[];}
+            else if(e.type==='LOW'&&qualified){
+              if(pos)closeTrade(e.date,e.close,'Monthly RSI < '+FLOOR);
+              qualified=false;P0=null;T1=null;windows=[];
+            }
+          }
+          if(pos){
+            const stopPx=pos.entry*(1+STOP);
+            if((bar.high??bar.close)>=stopPx)closeTrade(bar.date,stopPx,'Stop +'+Math.round(STOP*100)+'%');
+            else{
+              const tpPx=pos.entry*(1-TP);
+              if((bar.low??bar.close)<=tpPx)closeTrade(bar.date,tpPx,'Target -'+Math.round(TP*100)+'%');
+            }
+          }
+          if(qualified&&!pos){
+            // entry check on pending windows
+            for(let w=0;w<windows.length;w++){
+              const win=windows[w];
+              if((bar.high??bar.close)>=win.target){
+                windows.splice(w,1); w--;
+                if(win.target>=P0*MULT){
+                  pos={T1,P0,PbDate:win.PbDate,Pb:win.Pb,entry:win.target,entryDate:bar.date};
+                  windows=[]; break;
                 }
               }
             }
+            // new 2D trigger
+            if(!pos&&bar.rsi14!=null&&bar.rsi14>=R2&&(i===0||b2[i-1].rsi14==null||b2[i-1].rsi14<R2)&&bar.date>=T1){
+              windows.push({Pb:bar.close,PbDate:bar.date,target:bar.close*(1+RISE)});
+            }
           }
+        }
+        if(pos){
+          const last=b2[b2.length-1];
+          SHRES.push({sym,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
+            entryDate:pos.entryDate,entry:pos.entry,mult:pos.entry/pos.P0,
+            exitDate:last.date,exitPx:last.close,reason:'OPEN',
+            pnl:(pos.entry-last.close)/pos.entry*100,open:true});
         }
       }catch(e){}
       done++;
-      if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${FOLIST.length} · ${SHRES.length} signals`,'');
+      if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${FOLIST.length} · ${SHRES.length} trades`,'');
     };
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
       while(idx<FOLIST.length){const s=FOLIST[idx++]; await scan(s);}
     }));
-    SHRES.sort((a,b)=>b.entryDate.localeCompare(a.entryDate));
-    shRender(A,B,X,K);
+    const df=document.getElementById('shFrom').value, dt=document.getElementById('shTo').value;
+    if(df)SHRES=SHRES.filter(r=>String(r.entryDate)>=df);
+    if(dt)SHRES=SHRES.filter(r=>String(r.entryDate)<=dt+'~');
+    SHRES.sort((a,b)=>String(b.entryDate).localeCompare(String(a.entryDate)));
+    shRender();
   }finally{SHRUNNING=false;}
 }
-function shRender(A,B,X,K){
-  const closed=SHRES.filter(r=>!r.open&&r.ret!=null);
-  const wins=closed.filter(r=>r.ret<0).length;   // short wins when price falls
-  const avgPnl=closed.length?-closed.reduce((s,r)=>s+r.ret,0)/closed.length:0;
-  const avgFall=closed.length?closed.reduce((s,r)=>s+(r.fall||0),0)/closed.length:0;
-  const avgRise=closed.length?closed.reduce((s,r)=>s+(r.rise||0),0)/closed.length:0;
-  const best=closed.length?closed.reduce((a,b)=>a.ret<b.ret?a:b):null;
-  const worst=closed.length?closed.reduce((a,b)=>a.ret>b.ret?a:b):null;
+function shRender(){
+  const closed=SHRES.filter(r=>!r.open);
+  const wins=closed.filter(r=>r.pnl>0).length;
+  const stops=closed.filter(r=>r.reason.startsWith('Stop')).length;
+  const avg=closed.length?closed.reduce((s,r)=>s+r.pnl,0)/closed.length:0;
+  const best=SHRES.length?SHRES.reduce((a,b)=>a.pnl>b.pnl?a:b):null;
+  const worst=SHRES.length?SHRES.reduce((a,b)=>a.pnl<b.pnl?a:b):null;
   const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
   document.getElementById('shSummary').innerHTML=
-    box('Signals',SHRES.length)+
-    box('Short win rate',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
-    box('Avg short P&L',(avgPnl>=0?'+':'')+avgPnl.toFixed(2)+'%',avgPnl>=0?'pos':'neg')+
-    box('Avg deepest fall',avgFall.toFixed(2)+'%','pos')+
-    box('Avg worst rise','+'+avgRise.toFixed(2)+'%','neg')+
-    (best?box('Best short',`${best.sym} ${(-best.ret).toFixed(1)}%`,'pos'):'')+
-    (worst?box('Worst short',`${(-worst.ret).toFixed(1)}% ${worst.sym}`,'neg'):'');
+    box('Trades',SHRES.length)+
+    box('Open now',SHRES.filter(r=>r.open).length,'pos')+
+    box('Win rate (closed)',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
+    box('Avg P&L (closed)',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'pos':'neg')+
+    box('Stopped out',stops,'neg')+
+    box('RSI covers',closed.length-stops)+
+    (best?box('Best',`${best.sym} +${best.pnl.toFixed(1)}%`,'pos'):'')+
+    (worst?box('Worst',`${worst.sym} ${worst.pnl.toFixed(1)}%`,'neg'):'');
+  const fd=d=>typeof d==='string'?d:(d&&d.slice?d.slice(0,10):d);
   const t=document.getElementById('shTbl');
-  t.innerHTML=`<tr><th>#</th><th style="text-align:left">Symbol</th><th>M-RSI ≥${A} on (P0)</th><th>≥${document.getElementById('shMult').value}× on</th><th>2D-RSI ≥${B} on</th>`+
-    `<th>Price @2D trigger</th><th>Short entry (+${X}%) on</th><th>Entry price</th><th>After ${K} bars</th>`+
-    `<th>Short P&L</th><th>Deepest fall</th><th>Worst rise</th></tr>`+
+  t.innerHTML=`<tr><th>#</th><th style="text-align:left">Symbol</th><th>P0 (monthly cross)</th><th>2D trigger</th>`+
+    `<th>Short entry</th><th>× P0</th><th>Exit</th><th>Reason</th><th>Short P&L</th></tr>`+
     SHRES.slice(0,800).map((r,i)=>{
       const nm=NAMEMAP[r.sym]||'';
-      const pnl=r.ret==null?null:-r.ret;
-      const cls=pnl==null?'':(pnl>=0?'pos':'neg');
+      const cls=r.pnl>=0?'pos':'neg';
       return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.sym}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
-        `<td>${r.mDate}<br><span style="color:var(--muted);font-size:11px">${fmt(r.P0)}</span></td><td>${r.sixDate||'—'}</td><td>${r.bDate}</td><td>${fmt(r.Pb)}</td><td>${r.entryDate}</td><td>${fmt(r.entry)}</td>`+
-        `<td>${r.end}${r.open?' <span style="color:var(--amber)">(open)</span>':''}</td>`+
-        `<td class="${cls}">${pnl==null?'<span style="color:var(--amber)">⚡ just triggered</span>':(pnl>=0?'+':'')+fmt(pnl)+'%'}</td>`+
-        `<td class="pos">${r.fall==null?'—':fmt(r.fall)+'%'}</td>`+
-        `<td class="neg">${r.rise==null?'—':'+'+fmt(r.rise)+'%'}</td></tr>`;
+        `<td>${fd(r.T1)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.P0)}</span></td>`+
+        `<td>${fd(r.PbDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.Pb)}</span></td>`+
+        `<td>${fd(r.entryDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.entry)}</span></td>`+
+        `<td>${r.mult.toFixed(1)}×</td>`+
+        `<td>${fd(r.exitDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.exitPx)}</span></td>`+
+        `<td>${r.open?'<span style="color:var(--amber)">⚡ OPEN</span>':r.reason}</td>`+
+        `<td class="${cls}">${r.pnl>=0?'+':''}${fmt(r.pnl)}%</td></tr>`;
     }).join('')+
-    (SHRES.length>800?`<tr><td colspan="12" style="text-align:center;color:var(--muted)">showing first 800 of ${SHRES.length}</td></tr>`:'');
-  setS('shStatus',`${SHRES.length} blow-off short signals across F&O history (2-day bars). Short P&L is positive when price fell after entry.`,SHRES.length?'ok':'warn');
+    (SHRES.length>800?`<tr><td colspan="9" style="text-align:center;color:var(--muted)">showing first 800 of ${SHRES.length}</td></tr>`:'');
+  setS('shStatus',`${SHRES.length} short trades across F&O history. P&L positive when price fell after entry; OPEN rows show P&L at latest close.`,SHRES.length?'ok':'warn');
 }
 function shDownload(kind){
   try{
     if(!SHRES.length){setS('shStatus','Run a scan first.','warn');return;}
-    const header=['#','Symbol','Company Name','Monthly RSI date','Price P0','Multiplied on','2D RSI date','Trigger price','Short entry date','Entry price','End date','Open?','Short P&L %','Deepest fall %','Worst rise %'];
-    const rows=SHRES.map((r,i)=>[i+1,r.sym,NAMEMAP[r.sym]||'',r.mDate,+r.P0.toFixed(2),r.sixDate||'',r.bDate,+r.Pb.toFixed(2),r.entryDate,+r.entry.toFixed(2),r.end,r.open?'yes':'',
-      r.ret==null?'':+(-r.ret).toFixed(2),r.fall==null?'':+r.fall.toFixed(2),r.rise==null?'':+r.rise.toFixed(2)]);
+    const fd=d=>typeof d==='string'?d:(d&&d.slice?d.slice(0,10):d);
+    const header=['#','Symbol','Company Name','Monthly cross (T1)','P0','2D trigger date','2D price','Entry date','Entry price','× P0','Exit date','Exit price','Reason','Short P&L %'];
+    const rows=SHRES.map((r,i)=>[i+1,r.sym,NAMEMAP[r.sym]||'',fd(r.T1),+r.P0.toFixed(2),fd(r.PbDate),+r.Pb.toFixed(2),
+      fd(r.entryDate),+r.entry.toFixed(2),+r.mult.toFixed(2),fd(r.exitDate),+r.exitPx.toFixed(2),
+      r.open?'OPEN':r.reason,+r.pnl.toFixed(2)]);
     if(kind==='xlsx'){
       const wb=XLSX.utils.book_new();
       const ws=XLSX.utils.aoa_to_sheet([header].concat(rows));
       ws['!cols']=header.map((h,i)=>({wch:i===2?30:13}));
-      XLSX.utils.book_append_sheet(wb,ws,'Short Signals');
+      XLSX.utils.book_append_sheet(wb,ws,'Short Trades');
       if(window.__wbSink)window.__wbSink(wb,'blowoff_short.xlsx'); else XLSX.writeFile(wb,'blowoff_short.xlsx');
     } else {
       const esc=v=>{v=String(v);return v.includes(',')?'"'+v+'"':v;};
       dl(new Blob([[header.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),'blowoff_short.csv');
     }
-    setS('shStatus',`Exported ${SHRES.length} signals.`,'ok');
+    setS('shStatus',`Exported ${SHRES.length} trades.`,'ok');
   }catch(e){setS('shStatus','Download failed: '+e.message,'warn');}
 }
 
@@ -2002,11 +2072,15 @@ function saveRun(t){
     if(!SSRES.length){alert('Run the scan first.');return;}
     payload={res:SSRES,R:+document.getElementById('ssRsi').value,S:+document.getElementById('ssStoch').value,
       N:+document.getElementById('ssWin').value,F:+document.getElementById('ssFwd').value,
-      tf:document.getElementById('ssTf').value,mc:+document.getElementById('ssMc').value};
+      tf:document.getElementById('ssTf').value,mc:+document.getElementById('ssMc').value,
+      kl:+document.getElementById('ssKlen').value||14};
   } else if(t==='sh'){
     if(!SHRES.length){alert('Run the scan first.');return;}
-    payload={res:SHRES,A:+document.getElementById('shMrsi').value,B:+document.getElementById('shDrsi').value,
-      M:+document.getElementById('shMult').value,X:+document.getElementById('shRise').value,K:+document.getElementById('shFwd').value};
+    payload={res:SHRES,A:+document.getElementById('shMrsi').value,FL:+document.getElementById('shFloor').value,
+      B:+document.getElementById('shDrsi').value,M:+document.getElementById('shMult').value,
+      X:+document.getElementById('shRise').value,ST:+document.getElementById('shStop').value,
+      TP:+document.getElementById('shTP').value,
+      DF:document.getElementById('shFrom').value,DT:document.getElementById('shTo').value};
   } else return;
   const name=prompt('Name this run:',`${RUNLABELS[t]} · ${new Date().toISOString().slice(0,10)}`);
   if(name==null)return;
@@ -2049,13 +2123,17 @@ function openRunObj(r){
     document.getElementById('ssRsi').value=p.R; document.getElementById('ssStoch').value=p.S;
     document.getElementById('ssWin').value=p.N; document.getElementById('ssFwd').value=p.F;
     document.getElementById('ssTf').value=p.tf; document.getElementById('ssMc').value=p.mc;
+    document.getElementById('ssKlen').value=p.kl||14;
     ssRender(p.R,p.S,p.N,p.F,p.tf); showPane('ss');
   } else if(t==='sh'){
     const p=r.payload; SHRES=p.res;
     document.getElementById('shMrsi').value=p.A; document.getElementById('shDrsi').value=p.B;
     document.getElementById('shMult').value=p.M; document.getElementById('shRise').value=p.X;
-    document.getElementById('shFwd').value=p.K;
-    shRender(p.A,p.B,p.X,p.K); showPane('sh');
+    if(p.FL!=null)document.getElementById('shFloor').value=p.FL;
+    if(p.ST!=null)document.getElementById('shStop').value=p.ST;
+    document.getElementById('shFrom').value=p.DF||''; document.getElementById('shTo').value=p.DT||'';
+    if(p.TP!=null)document.getElementById('shTP').value=p.TP;
+    shRender(); showPane('sh');
   }
 }
 function runExcel(id){
