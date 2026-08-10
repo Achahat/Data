@@ -99,11 +99,9 @@ a{color:var(--accent);}
     <button class="ghost mini hidden" id="localBtn" onclick="pickLocal()">Use local data folder</button></div>
   <div class="nav" id="mainNav">
     <div class="nav-item"><button class="nav-btn">Raw Data ▾</button>
-      <div class="nav-drop"><a data-pane="dl">Data Download</a><a data-pane="mm">Multi Month</a></div></div>
+      <div class="nav-drop"><a data-pane="dl">Data Download</a><a data-pane="mm">Multi Month</a><a data-pane="mr">Monthly RSI</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="sx">Sector Strategy</a></div></div>
-    <div class="nav-item"><button class="nav-btn">Stoch Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ss">RSI + Stoch Reversal</a></div></div>
+      <div class="nav-drop"><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
       <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
@@ -179,6 +177,8 @@ a{color:var(--accent);}
       <button class="ghost hidden" id="stStartBtn" onclick="STRATS.st.start()">Start strategy with selected ▶</button>
     </div>
     <div class="status" id="stSetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('st',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('st',false)">Unselect all</button><span class="pill" id="stPickCount"></span></div>
     <div class="tblwrap"><table id="stPickTbl"></table></div>
   </div>
   <div id="stRun" class="hidden">
@@ -230,6 +230,8 @@ a{color:var(--accent);}
       <button class="ghost hidden" id="mcStartBtn" onclick="STRATS.mc.start()">Start strategy with selected ▶</button>
     </div>
     <div class="status" id="mcSetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('mc',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('mc',false)">Unselect all</button><span class="pill" id="mcPickCount"></span></div>
     <div class="tblwrap"><table id="mcPickTbl"></table></div>
   </div>
   <div id="mcRun" class="hidden">
@@ -332,6 +334,11 @@ a{color:var(--accent);}
       <button onclick="STRATS.sx.screen()">Load shares</button>
       <button class="ghost hidden" id="sxStartBtn" onclick="STRATS.sx.start()">Start strategy ▶</button>
     </div>
+    <div class="row" style="margin-bottom:4px">
+      <button class="ghost mini" onclick="STRATS.sx.addAllShown()">Add all shown</button>
+      <button class="ghost mini" onclick="STRATS.sx.clearPicked()">Clear all</button>
+      <span class="pill" id="sxPickCount"></span>
+    </div>
     <div class="row">
       <div style="position:relative;flex:1;min-width:320px">
         <label>Add share (search all shares)</label>
@@ -415,6 +422,9 @@ a{color:var(--accent);}
     <div><label>Rise to short %</label><input type="number" id="shRise" style="width:80px" value="50"></div>
     <div><label>Stop-loss %</label><input type="number" id="shStop" style="width:80px" value="20"></div>
     <div><label>Take-profit fall %</label><input type="number" id="shTP" style="width:80px" value="40"></div>
+    <div><label>Reset if journey falls %</label><input type="number" id="shJFall" style="width:80px" value="40"></div>
+    <div><label>2D bar alignment</label>
+      <select id="shPhase"><option value="0">Phase A</option><option value="1">Phase B</option><option value="2" selected>Either (safest)</option></select></div>
     <div><label>Entries from</label><input type="date" id="shFrom"></div>
     <div><label>to</label><input type="date" id="shTo"></div>
     <button onclick="shRun()">Run scan</button>
@@ -437,6 +447,79 @@ a{color:var(--accent);}
   </div>
   <div class="status" id="srStatus">Saved runs live in this browser AND, once you connect a folder inside your MEGA-synced Data folder (e.g. Data\saved_runs), every 💾 Save also writes the Excel + run file there — MEGA uploads them automatically.</div>
   <div class="tblwrap"><table id="srTbl"></table></div>
+</div>
+
+<!-- WEEKLY CHANGE (monthly RSI, one swap per week) -->
+<div class="card hidden" id="pane-wk">
+  <div class="section-head">Weekly Change — one swap each week, ranked on monthly RSI</div>
+  <div id="wkSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="wkDate"></div>
+      <div><label>RSI (monthly) min</label><input type="number" id="wkRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="wkMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="wkAmt" style="width:120px" value="100000"></div>
+      <div class="hidden"><input type="checkbox" id="wkNextM"></div>
+      <button onclick="STRATS.wk.screen()">Screen shares</button>
+      <button class="ghost hidden" id="wkStartBtn" onclick="STRATS.wk.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="wkSetupStatus">Screen, tick the shares you want in the starting portfolio, then start. Ranking uses monthly RSI; you make one change per week.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('wk',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('wk',false)">Unselect all</button><span class="pill" id="wkPickCount"></span></div>
+    <div class="tblwrap"><table id="wkPickTbl"></table></div>
+  </div>
+  <div id="wkRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="wkHead" style="font-size:14px"></div>
+      <div>
+        <button id="wkNextBtn" onclick="STRATS.wk.advance()">Next week ▶</button>
+        <button class="ghost" onclick="STRATS.wk.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('wk')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.wk.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="wkSwapRow">
+      <div id="wkSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.wk.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.wk.apply(false)">No change this week</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="wkChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="wkChart2"></canvas></div>
+    <div class="row" id="wkInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="wkHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — weekly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="wkLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- RAW DATA: MONTHLY RSI -->
+<div class="card hidden" id="pane-mr">
+  <div class="section-head">Monthly RSI — shares above a level, month by month</div>
+  <div class="row">
+    <div><label>Month</label>
+      <select id="mrMonth">
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select></div>
+    <div><label>Year</label><select id="mrYear"></select></div>
+    <div><label>RSI (monthly) min</label><input type="number" id="mrRsi" style="width:100px" value="80"></div>
+    <div><label>Min Mcap (₹ cr)</label><input type="number" id="mrMc" style="width:110px" placeholder="optional"></div>
+    <button onclick="mrRun(0)">Show shares</button>
+    <button class="ghost" onclick="mrRun(-1)">◀ Prev month</button>
+    <button class="ghost" onclick="mrRun(1)">Next month ▶</button>
+    <button class="ghost" onclick="mrDownload('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="mrDownload('csv')">Download CSV</button>
+  </div>
+  <div class="status" id="mrStatus">Pick a month and RSI level — every share at or above it on that month's last trading day, with the total count.</div>
+  <div class="tblwrap"><table id="mrTbl"></table></div>
 </div>
 
 <!-- CHART -->
@@ -620,7 +703,7 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{STRATS.st.restore();STRATS.mc.restore();STRATS.ac.restore();STRATS.sx.restore();}catch(e){}
+  try{STRATS.st.restore();STRATS.mc.restore();STRATS.ac.restore();STRATS.wk.restore();STRATS.sx.restore();}catch(e){}
   try{renderWatchlist();}catch(e){}
 }
 let NAMEMAP={};
@@ -701,7 +784,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','st','mc','sx','ss','sh','sr','chart','screener','analyse','export'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ss','sh','sr','chart','screener','analyse','export'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -916,6 +999,29 @@ function mmDownload(kind){
 }
 
 /* ============ strategy engines (steps 3 & 4) ============ */
+async function loadScanByDate(d){
+  return {date:d,rows:parseCSV(await fetchGz(`data/scan/${d}.csv.gz`))};
+}
+function isoWeek(ds){
+  const dt=new Date(ds+'T00:00:00Z'); const day=(dt.getUTCDay()+6)%7;
+  dt.setUTCDate(dt.getUTCDate()-day+3);
+  const th=new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  return dt.getUTCFullYear()+'-'+Math.round(((dt-th)/86400000+((th.getUTCDay()+6)%7)-3)/7);
+}
+async function nextWeekEnd(cur){
+  const dates=await getScanDates(); if(!dates||!dates.length)return null;
+  const after=dates.filter(d=>d>cur); if(!after.length)return null;
+  const wk=isoWeek(after[0]); let last=after[0];
+  for(const d of after){ if(isoWeek(d)===wk) last=d; else break; }
+  return last;
+}
+function updatePickCount(P){
+  const el=document.getElementById(P+'PickCount'); if(!el)return;
+  const tot=document.querySelectorAll('.'+P+'Pick').length;
+  const sel=document.querySelectorAll('.'+P+'Pick:checked').length;
+  el.textContent=`${sel} of ${tot} selected`;
+}
+function pickAll(P,v){document.querySelectorAll('.'+P+'Pick').forEach(c=>c.checked=v);updatePickCount(P);}
 async function loadScanByMonth(mth){
   const dates=await getScanDates();
   const sd=dates?dates.filter(d=>d.startsWith(mth)).pop():null;
@@ -972,6 +1078,8 @@ function makeStrategy(P,fixedN,title,opts){
           `<td>${fmt(r.rsi_m)}</td><td>${fmt(r.close)}</td><td>${r.mcap_cr==null?'-':fmt0(r.mcap_cr)}</td></tr>`;
       }).join('');
     $('StartBtn').classList.remove('hidden');
+    $('PickTbl').onchange=()=>updatePickCount(P);
+    updatePickCount(P);
     setS(P+'SetupStatus',`${inst.scr.length} shares qualify on ${sd}. Untick any you don't want, then start.`,'ok');
   };
 
@@ -980,8 +1088,8 @@ function makeStrategy(P,fixedN,title,opts){
     if(!picked.length){setS(P+'SetupStatus','Tick at least one share.','warn');return;}
     const S=inst.S;
     S.amt=+$('Amt').value||100000;
-    let buyDate=S.screenDate, buyRows=inst.scr, month=S.screenDate.slice(0,7);
-    if($('NextM').checked){
+    let buyDate=S.screenDate, buyRows=inst.scr, month=opts.weekly?S.screenDate:S.screenDate.slice(0,7);
+    if(!opts.weekly&&$('NextM').checked){
       const [y,m]=month.split('-').map(Number);
       const nm=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,'0')}`;
       const sc=await loadScanByMonth(nm);
@@ -1004,7 +1112,7 @@ function makeStrategy(P,fixedN,title,opts){
     if(opts.sectors){S.sectorNames=inst.sectorNames;S.sectorSeries={};pushSector(month);}
     try{
       const nrows=await loadSeries('ix','NIFTY_50');
-      S.nifty={}; nrows.forEach(r=>{S.nifty[r.date.slice(0,7)]=r.close;});
+      S.nifty={}; nrows.forEach(r=>{S.nifty[opts.weekly?r.date:r.date.slice(0,7)]=r.close;});
     }catch(e){S.nifty=null;}
     S.niftyBase=S.nifty?S.nifty[month]:null;
     $('Setup').classList.add('hidden'); $('Run').classList.remove('hidden');
@@ -1015,10 +1123,18 @@ function makeStrategy(P,fixedN,title,opts){
 
   inst.advance=async function(){
     const S=inst.S;
-    const [y,m]=S.month.split('-').map(Number);
-    const nm=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,'0')}`;
-    setS(P+'Head','loading '+nm+'…','');
-    const sc=await loadScanByMonth(nm);
+    let nm,sc;
+    if(opts.weekly){
+      nm=await nextWeekEnd(S.month);
+      if(!nm){inst.render('No data beyond '+S.month+' — strategy ends here.');$('NextBtn').disabled=true;return;}
+      setS(P+'Head','loading '+nm+'…','');
+      sc=await loadScanByDate(nm);
+    } else {
+      const [y,m]=S.month.split('-').map(Number);
+      nm=`${m===12?y+1:y}-${String(m===12?1:m+1).padStart(2,'0')}`;
+      setS(P+'Head','loading '+nm+'…','');
+      sc=await loadScanByMonth(nm);
+    }
     if(!sc){inst.render('No data beyond '+S.month+' — strategy ends here.');$('NextBtn').disabled=true;return;}
     S.month=nm;
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
@@ -1046,7 +1162,7 @@ function makeStrategy(P,fixedN,title,opts){
     $('Swaps').innerHTML=k?html:'<div class="status warn">No qualifying candidates this month.</div>';
     $('SwapRow').classList.remove('hidden');
     $('NextBtn').disabled=true;
-    inst.render(`Month ${nm} (as on ${sc.date}) — set the ${k||0} change(s) or skip.`);
+    inst.render(`${opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — set the ${k||0} change(s) or skip.`);
   };
 
   inst.apply=function(doSwap){
@@ -1065,12 +1181,24 @@ function makeStrategy(P,fixedN,title,opts){
         const h=S.holdings[hi];
         const proceeds=h.units*h.lastClose;
         const inSec=opts.sectors?(secs[i]||h.sector):undefined;
+        // anti-concentration: cap a single buy at 1.5x equal weight (6% when 25 holdings);
+        // above that buy at equal weight and spread the excess equally over the rest
+        const V=S.holdings.reduce((s,x)=>s+x.units*x.lastClose,0);
+        const eq=V/Math.max(1,S.holdings.length), cap=eq*1.5;
+        let buyAmt=proceeds, excess=0;
+        if(proceeds>cap){buyAmt=eq; excess=proceeds-eq;}
         S.log.push({month:S.month,out:h.sym,outBuy:h.buyPrice,outSell:h.lastClose,
-          pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:nsym,inPrice:inRow.close,amount:proceeds,
-          outSector:h.sector,inSector:inSec});
+          pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:nsym,inPrice:inRow.close,
+          amount:buyAmt,excess:excess>0?excess:undefined,outSector:h.sector,inSector:inSec});
         S.holdings.splice(hi,1);
-        const nh={sym:nsym,units:proceeds/inRow.close,buyPrice:inRow.close,
-          cost:proceeds,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:S.month};
+        if(excess>0){
+          const others=S.holdings.filter(x=>x.lastClose>0);
+          if(others.length){const per=excess/others.length;
+            others.forEach(x=>{x.units+=per/x.lastClose; x.cost+=per;});}
+          else {buyAmt+=excess; excess=0;}
+        }
+        const nh={sym:nsym,units:buyAmt/inRow.close,buyPrice:inRow.close,
+          cost:buyAmt,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:S.month};
         if(opts.sectors)nh.sector=inSec;
         S.holdings.push(nh);
         usedOut.add(o); usedIn.add(nsym);
@@ -1084,7 +1212,7 @@ function makeStrategy(P,fixedN,title,opts){
     $('SwapRow').classList.add('hidden');
     $('NextBtn').disabled=false;
     persist();
-    inst.render(`Month ${S.month} done — press Next for the following month.`);
+    inst.render(`${opts.weekly?'Week':'Month'} ${S.month} done — press Next for the following ${opts.weekly?'week':'month'}.`);
   };
 
   inst.sortHold=function(col){
@@ -1280,7 +1408,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -1311,7 +1439,18 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
           `<td><button class="ghost mini" onclick="STRATS.sx.removePick('${p.sym}')">✕</button></td></tr>`;
       }).join(''):'';
     el('sxStartBtn').classList.toggle('hidden',!PICKED.length);
+    const pc=el('sxPickCount'); if(pc)pc.textContent=PICKED.length+' selected';
   }
+  sx.addAllShown=()=>{
+    if(!SCAN)return;
+    const rv=el('sxRsi').value, rmin=rv===''?null:+rv;
+    const mv=el('sxMc').value, mmin=mv===''?null:+mv;
+    const list=[...SCAN.rows].filter(r=>r.rsi_m!=null&&(rmin==null||r.rsi_m>=rmin)
+      &&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin))).sort((a,b)=>b.rsi_m-a.rsi_m).slice(0,300);
+    list.forEach(r=>{if(!PICKED.some(p=>p.sym===r.symbol))PICKED.push({sym:r.symbol,sector:SECMAP[r.symbol]||''});});
+    renderSel(); renderBrowse();
+  };
+  sx.clearPicked=()=>{PICKED=[];renderSel();renderBrowse();};
   sx.setSec=(sym,v)=>{const p=PICKED.find(x=>x.sym===sym);if(p)p.sector=v;remember(sym,v);refreshDatalist();};
   sx.removePick=sym=>{PICKED=PICKED.filter(p=>p.sym!==sym);renderSel();renderBrowse();};
   sx.addPick=sym=>{
@@ -1463,12 +1602,22 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
         const inSec=sec||SECMAP[nsym]||h.sector||'Others';
         remember(nsym,inSec);
         if(!S.sectorNames.includes(inSec))S.sectorNames.push(inSec);
+        const V=S.holdings.reduce((s,x)=>s+x.units*x.lastClose,0);
+        const eq=V/Math.max(1,S.holdings.length), cap=eq*1.5;
+        let buyAmt=proceeds, excess=0;
+        if(proceeds>cap){buyAmt=eq; excess=proceeds-eq;}
         S.log.push({month:S.month,out:h.sym,outBuy:h.buyPrice,outSell:h.lastClose,
-          pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:nsym,inPrice:inRow.close,amount:proceeds,
-          outSector:h.sector,inSector:inSec});
+          pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:nsym,inPrice:inRow.close,
+          amount:buyAmt,excess:excess>0?excess:undefined,outSector:h.sector,inSector:inSec});
         S.holdings.splice(hi,1);
-        S.holdings.push({sym:nsym,units:proceeds/inRow.close,buyPrice:inRow.close,
-          cost:proceeds,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:S.month,sector:inSec});
+        if(excess>0){
+          const others=S.holdings.filter(x=>x.lastClose>0);
+          if(others.length){const per=excess/others.length;
+            others.forEach(x=>{x.units+=per/x.lastClose; x.cost+=per;});}
+          else {buyAmt+=excess; excess=0;}
+        }
+        S.holdings.push({sym:nsym,units:buyAmt/inRow.close,buyPrice:inRow.close,
+          cost:buyAmt,lastClose:inRow.close,rsi:inRow.rsi_m,buyMonth:S.month,sector:inSec});
         usedOut.add(o); usedIn.add(nsym); done++;
       }
       if(!done)S.log.push({month:S.month,out:null,inSym:null});
@@ -1832,13 +1981,27 @@ function ssDownload(kind){
 /* ============ short strategy: blow-off short (F&O) ============ */
 const FOLIST=['ADANIENSOL','360ONE','ABB','ADANIPORTS','ABCAPITAL','AMBER','ASIANPAINT','ADANIENT','BAJAJFINSV','APLAPOLLO','BAJAJHLDNG','BAJFINANCE','ADANIGREEN','BHARTIARTL','BOSCHLTD','BRITANNIA','ALKEM','CAMS','CDSL','COALINDIA','AMBUJACEM','COLPAL','COFORGE','CONCOR','DABUR','ANGELONE','AUROPHARMA','DIVISLAB','APOLLOHOSP','BDL','DLF','DMART','BIOCON','DRREDDY','BSE','EICHERMOT','ETERNAL','FORTIS','GAIL','BANKINDIA','GODREJCP','CGPOWER','HCLTECH','GODREJPROP','BEL','BHEL','BLUESTARCO','ICICIPRULI','ADANIPOWER','INDHOTEL','CUMMINSIND','INDUSINDBK','CHOLAFIN','IEX','CIPLA','JIOFIN','JSWENERGY','KAYNES','KEI','INFY','KPITTECH','JSWSTEEL','LICHSGFIN','GLENMARK','LODHA','GMRAIRPORT','CROMPTON','KALYANKJIL','ASHOKLEY','M&M','ASTRAL','DALBHARAT','MARICO','HDFCBANK','HDFCLIFE','NESTLEIND','LAURUSLABS','BAJAJ-AUTO','FEDERALBNK','OBEROIRLTY','LTM','ICICIGI','FORCEMOT','IDFCFIRSTB','MANAPPURAM','PAYTM','INDIGO','IREDA','PFC','PGEL','PNB','POLYCAB','POWERINDIA','PRESTIGE','RADICO','RECLTD','SAIL','SBILIFE','SHREECEM','SOLARINDS','SUPREMEIND','SWIGGY','TATACONSUM','TATAELXSI','PHOENIXLTD','TATAPOWER','TATASTEEL','TVSMOTOR','UNIONBANK','VEDL','PIIND','VMM','BANKBARODA','BHARATFORG','GRASIM','GVT&D','BPCL','SUNPHARMA','HAVELLS','SUZLON','TCS','DIXON','TITAN','WIPRO','HEROMOTOCO','HINDPETRO','HYUNDAI','ICICIBANK','INDUSTOWER','IRFC','JINDALSTEL','LTF','MANKIND','MARUTI','MOTHERSON','MOTILALOFS','HINDALCO','MPHASIS','NAM-INDIA','NATIONALUM','NBCC','HINDZINC','NYKAA','OFSS','OIL','ITC','ONGC','IDEA','PAGEIND','PERSISTENT','PNBHOUSING','JUBLFOOD','POWERGRID','PREMIERENE','LT','LICI','RBLBANK','RELIANCE','MAXHEALTH','SBIN','MCX','SONACOMS','MFSL','MUTHOOTFIN','NAUKRI','SRF','NMDC','TECHM','TIINDIA','TMPV','ULTRACEMCO','PETRONET','SIEMENS','PATANJALI','TORNTPHARM','UNITDSPR','UNOMINDA','UPL','YESBANK','BANDHANBNK','VBL','WAAREEENER','COCHINSHIP','INOXWIND','KOTAKBANK','LUPIN','DELHIVERY','AXISBANK','POLICYBZR','HDFCAMC','INDIANB','HAL','KFINTECH','HINDUNILVR','MAZDOCK','NHPC','NTPC','PIDILITIND','RVNL','ZYDUSLIFE','GODFRYPHLP','VOLTAS','CANBK','AUBANK','TRENT','SBICARD','SHRIRAMFIN','IOC'];
 let SHRES=[], SHRUNNING=false;
-function bars2D(daily){
-  const out=[];
-  for(let i=0;i<daily.length;i+=2){
-    const a=daily[i], b=daily[i+1]||daily[i];
-    out.push({date:b.date,open:a.open,high:Math.max(a.high??a.close,b.high??b.close),
-      low:Math.min(a.low??a.close,b.low??b.close),close:b.close});
-  }
+let SHCAL=null;   // global NSE trading-day calendar: date -> session index
+async function shCalendar(){
+  if(SHCAL)return SHCAL;
+  const dates=await getScanDates();
+  SHCAL=new Map();
+  if(dates)dates.forEach((d,i)=>SHCAL.set(d,i));
+  return SHCAL;
+}
+// 2-day bars anchored to the EXCHANGE calendar (same boundaries for every stock),
+// phase 0 or 1 selects which session starts each pair.
+function bars2D(daily,cal,phase){
+  const groups=new Map();
+  daily.forEach(r=>{
+    const gi=cal.get(r.date);
+    if(gi==null)return;
+    const key=Math.floor((gi-phase)/2);
+    const g=groups.get(key);
+    if(!g)groups.set(key,{date:r.date,open:r.open,high:r.high??r.close,low:r.low??r.close,close:r.close});
+    else{g.high=Math.max(g.high,r.high??r.close);g.low=Math.min(g.low,r.low??r.close);g.close=r.close;g.date=r.date;}
+  });
+  const out=[...groups.entries()].sort((a,b)=>a[0]-b[0]).map(e=>e[1]);
   const rsi=rsiCalc(out.map(r=>r.close));
   out.forEach((r,i)=>r.rsi14=rsi[i]);
   return out;
@@ -1853,14 +2016,20 @@ async function shRun(){
   const RISE=(+document.getElementById('shRise').value||50)/100;
   const STOP=(+document.getElementById('shStop').value||20)/100;
   const TP=(+document.getElementById('shTP').value||40)/100;
+  const JF=(+document.getElementById('shJFall').value||40)/100;
+  const PH=+document.getElementById('shPhase').value;
+  const phases=PH===2?[0,1]:[PH];
   SHRUNNING=true; SHRES=[];
   try{
+    const cal=await shCalendar();
     let done=0;
     const scan=async sym=>{
       try{
         const daily=await loadSeries('eq',sym);
         const mo=resample(daily,'M');
-        const b2=bars2D(daily);
+        const found=[];
+        for(const ph of phases){
+        const b2=bars2D(daily,cal,ph);
         // monthly events in date order
         const mev=[];
         for(let i=0;i<mo.length;i++){
@@ -1870,9 +2039,9 @@ async function shRun(){
           if(r.rsi14<FLOOR)mev.push({date:r.date,type:'LOW',close:r.close,rsi:r.rsi14});
         }
         let mi=0;
-        let qualified=false,P0=null,T1=null,windows=[],pos=null;
+        let qualified=false,P0=null,T1=null,windows=[],pos=null,peak=null;
         const closeTrade=(exitDate,exitPx,reason)=>{
-          SHRES.push({sym,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
+          found.push({sym,phase:ph,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
             entryDate:pos.entryDate,entry:pos.entry,mult:pos.entry/pos.P0,
             exitDate,exitPx,reason,pnl:(pos.entry-exitPx)/pos.entry*100,open:false});
           pos=null;
@@ -1882,10 +2051,17 @@ async function shRun(){
           // monthly events up to this bar's date
           while(mi<mev.length&&mev[mi].date<=bar.date){
             const e=mev[mi++];
-            if(e.type==='T1'&&!qualified){qualified=true;P0=e.close;T1=e.date;windows=[];}
+            if(e.type==='T1'&&!qualified){qualified=true;P0=e.close;T1=e.date;windows=[];peak=e.close;}
             else if(e.type==='LOW'&&qualified){
               if(pos)closeTrade(e.date,e.close,'Monthly RSI < '+FLOOR);
               qualified=false;P0=null;T1=null;windows=[];
+            }
+          }
+          if(qualified&&bar.date>=T1){
+            peak=Math.max(peak??0,bar.high??bar.close);
+            // journey drawdown guard: a fall of JF% from the running peak resets the setup
+            if(!pos&&peak>0&&(bar.low??bar.close)<=peak*(1-JF)){
+              qualified=false;P0=null;T1=null;windows=[];peak=null;
             }
           }
           if(pos){
@@ -1916,11 +2092,20 @@ async function shRun(){
         }
         if(pos){
           const last=b2[b2.length-1];
-          SHRES.push({sym,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
+          found.push({sym,phase:ph,T1:pos.T1,P0:pos.P0,PbDate:pos.PbDate,Pb:pos.Pb,
             entryDate:pos.entryDate,entry:pos.entry,mult:pos.entry/pos.P0,
             exitDate:last.date,exitPx:last.close,reason:'OPEN',
             pnl:(pos.entry-last.close)/pos.entry*100,open:true});
         }
+        }
+        // merge phases: earliest entry wins; drop trades overlapping an accepted one
+        found.sort((a,b)=>String(a.entryDate).localeCompare(String(b.entryDate)));
+        const kept=[];
+        for(const f of found){
+          if(kept.some(k=>String(f.entryDate)<=String(k.exitDate)&&String(f.entryDate)>=String(k.entryDate)))continue;
+          kept.push(f);
+        }
+        kept.forEach(k=>SHRES.push(k));
       }catch(e){}
       done++;
       if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${FOLIST.length} · ${SHRES.length} trades`,'');
@@ -1962,7 +2147,7 @@ function shRender(){
       const cls=r.pnl>=0?'pos':'neg';
       return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.sym}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
         `<td>${fd(r.T1)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.P0)}</span></td>`+
-        `<td>${fd(r.PbDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.Pb)}</span></td>`+
+        `<td>${fd(r.PbDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.Pb)}${r.phase!=null?' · '+(r.phase?'B':'A'):''}</span></td>`+
         `<td>${fd(r.entryDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.entry)}</span></td>`+
         `<td>${r.mult.toFixed(1)}×</td>`+
         `<td>${fd(r.exitDate)}<br><span style="color:var(--muted);font-size:11px">${fmt(r.exitPx)}</span></td>`+
@@ -1995,7 +2180,7 @@ function shDownload(kind){
 }
 
 /* ============ saved runs ============ */
-const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',sx:'Sector Strategy',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
+const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
 // ---- MEGA-synced folder handle (persisted in IndexedDB) ----
 function idbKV(){return new Promise((res,rej)=>{const q=indexedDB.open('btp',1);
   q.onupgradeneeded=()=>q.result.createObjectStore('kv');
@@ -2040,7 +2225,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -2064,7 +2249,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx'].includes(t)){
+  if(['st','mc','ac','sx','wk'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -2079,7 +2264,8 @@ function saveRun(t){
     payload={res:SHRES,A:+document.getElementById('shMrsi').value,FL:+document.getElementById('shFloor').value,
       B:+document.getElementById('shDrsi').value,M:+document.getElementById('shMult').value,
       X:+document.getElementById('shRise').value,ST:+document.getElementById('shStop').value,
-      TP:+document.getElementById('shTP').value,
+      TP:+document.getElementById('shTP').value,JF:+document.getElementById('shJFall').value,
+      PH:document.getElementById('shPhase').value,
       DF:document.getElementById('shFrom').value,DT:document.getElementById('shTo').value};
   } else return;
   const name=prompt('Name this run:',`${RUNLABELS[t]} · ${new Date().toISOString().slice(0,10)}`);
@@ -2110,7 +2296,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx'].includes(t)){
+  if(['st','mc','ac','sx','wk'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -2133,13 +2319,15 @@ function openRunObj(r){
     if(p.ST!=null)document.getElementById('shStop').value=p.ST;
     document.getElementById('shFrom').value=p.DF||''; document.getElementById('shTo').value=p.DT||'';
     if(p.TP!=null)document.getElementById('shTP').value=p.TP;
+    if(p.JF!=null)document.getElementById('shJFall').value=p.JF;
+    if(p.PH!=null)document.getElementById('shPhase').value=p.PH;
     shRender(); showPane('sh');
   }
 }
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx'].includes(t)){
+  if(['st','mc','ac','sx','wk'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -2154,6 +2342,58 @@ function delRun(id){
   if(!confirm('Delete this saved run?'))return;
   putRuns(getRuns().filter(r=>r.id!==id));
   renderSavedRuns();
+}
+
+/* ============ raw data: monthly RSI ============ */
+let MRROWS=[], MRDATE=null;
+async function mrRun(step){
+  if(!MANIFEST){setS('mrStatus','Not connected to data yet.','warn');return;}
+  const ms=document.getElementById('mrMonth'), ys=document.getElementById('mrYear');
+  if(step){
+    let y=+ys.value, m=+ms.value+step;
+    if(m>12){m=1;y++;} if(m<1){m=12;y--;}
+    if(!ys.querySelector(`option[value="${y}"]`)){setS('mrStatus','No data for that year.','warn');return;}
+    ys.value=y; ms.value=String(m).padStart(2,'0');
+  }
+  const mth=ys.value+'-'+ms.value;
+  const rmin=+document.getElementById('mrRsi').value||0;
+  const mv=document.getElementById('mrMc').value, mmin=mv===''?null:+mv;
+  setS('mrStatus','loading '+mth+'…','');
+  const sc=await loadScanByMonth(mth);
+  if(!sc){setS('mrStatus','No trading data for '+mth+'.','warn');document.getElementById('mrTbl').innerHTML='';return;}
+  MRDATE=sc.date;
+  MRROWS=sc.rows.filter(r=>r.rsi_m!=null&&r.rsi_m>=rmin&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)))
+    .sort((a,b)=>b.rsi_m-a.rsi_m);
+  const t=document.getElementById('mrTbl');
+  t.innerHTML='<tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI (monthly)</th><th>Close</th><th>%Chg (month)</th><th>Mcap ₹ cr</th></tr>'+
+    MRROWS.slice(0,800).map((r,i)=>{
+      const nm=NAMEMAP[r.symbol]||'', ch=r.chg_m;
+      return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.symbol}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
+        `<td>${fmt(r.rsi_m)}</td><td>${fmt(r.close)}</td>`+
+        `<td class="${ch==null?'':(ch>=0?'pos':'neg')}">${ch==null?'-':(ch>=0?'+':'')+fmt(ch)+'%'}</td>`+
+        `<td>${r.mcap_cr==null?'-':fmt0(r.mcap_cr)}</td></tr>`;
+    }).join('')+
+    (MRROWS.length>800?`<tr><td colspan="6" style="text-align:center;color:var(--muted)">showing first 800 of ${MRROWS.length}</td></tr>`:'');
+  setS('mrStatus',`${mth} (as on ${sc.date}) — ${MRROWS.length.toLocaleString()} shares with monthly RSI ≥ ${rmin}${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}.`,MRROWS.length?'ok':'warn');
+}
+function mrDownload(kind){
+  try{
+    if(!MRROWS.length){setS('mrStatus','Show a month first.','warn');return;}
+    const header=['#','Symbol','Company Name','RSI (monthly)','Close','%Chg (month)','Mcap ₹ cr'];
+    const rows=MRROWS.map((r,i)=>[i+1,r.symbol,NAMEMAP[r.symbol]||'',r.rsi_m??'',r.close??'',r.chg_m??'',r.mcap_cr??'']);
+    const stamp=MRDATE||'';
+    if(kind==='xlsx'){
+      const wb=XLSX.utils.book_new();
+      const ws=XLSX.utils.aoa_to_sheet([[`Monthly RSI screen — as on ${stamp} · ${MRROWS.length} shares`],header].concat(rows));
+      ws['!cols']=[{wch:5},{wch:14},{wch:32},{wch:13},{wch:11},{wch:13},{wch:12}];
+      XLSX.utils.book_append_sheet(wb,ws,'Monthly RSI');
+      if(window.__wbSink)window.__wbSink(wb,`monthly_rsi_${stamp}.xlsx`); else XLSX.writeFile(wb,`monthly_rsi_${stamp}.xlsx`);
+    } else {
+      const esc=v=>{v=String(v);return v.includes(',')?'"'+v+'"':v;};
+      dl(new Blob([[header.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),`monthly_rsi_${stamp}.csv`);
+    }
+    setS('mrStatus',`Exported ${MRROWS.length} shares.`,'ok');
+  }catch(e){setS('mrStatus','Download failed: '+e.message,'warn');}
 }
 
 /* ============ watchlist ============ */
@@ -2359,7 +2599,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
@@ -2368,6 +2608,9 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
     ys.value=cy;
   }
   document.getElementById('mmMonth2').value=String(to.getMonth()+1).padStart(2,'0');
+  const mys=document.getElementById('mrYear');
+  for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;mys.appendChild(o);}
+  mys.value=cy; document.getElementById('mrMonth').value=String(to.getMonth()+1).padStart(2,'0');
   const ays=document.getElementById('acYear');
   for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
   ays.value=2020;
