@@ -100,12 +100,14 @@ a{color:var(--accent);}
   <div class="nav" id="mainNav">
     <div class="nav-item"><button class="nav-btn">Raw Data ▾</button>
       <div class="nav-drop"><a data-pane="dl">Data Download</a><a data-pane="mm">Multi Month</a><a data-pane="mr">Monthly RSI</a></div></div>
+    <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
+      <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="t3">Multi Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
       <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
-      <div class="nav-drop"><a class="soon">Coming soon</a></div></div>
+      <div class="nav-drop"><a data-pane="ix1">RSI + Stoch (Futures)</a><a data-pane="ix2">Buy Grid</a><a data-pane="ix3">Short Grid</a><a data-pane="ix4">Rollover / Carry Cost</a></div></div>
     <div class="nav-item"><button class="nav-btn">Tools ▾</button>
       <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a><a data-pane="sr">Saved Runs</a><a onclick="pickLocal()">Use local data folder</a><a onclick="useMegaData()">Use MEGA data</a></div></div>
   </div>
@@ -440,6 +442,99 @@ a{color:var(--accent);}
   <div class="tblwrap" style="max-height:520px"><table id="shTbl"></table></div>
 </div>
 
+<!-- INDEX STRATEGY 1: RSI + STOCH ON INDEX FUTURES -->
+<div class="card hidden" id="pane-ix1">
+  <div class="section-head">Index Futures — RSI + Stoch reversal (long)</div>
+  <div class="row">
+    <div><label>Instrument</label><select id="ix1Sym" style="width:150px"></select></div>
+    <div><label>Buy when RSI &lt;</label><input type="number" id="ix1RsiB" style="width:80px" value="30"></div>
+    <div><label>and %K &lt;</label><input type="number" id="ix1StB" style="width:80px" value="20"></div>
+    <div><label>Exit when RSI ≥</label><input type="number" id="ix1RsiS" style="width:80px" value="60"></div>
+    <div><label>or %K ≥</label><input type="number" id="ix1StS" style="width:80px" value="70"></div>
+    <div><label>Entry rule</label><select id="ix1Join"><option value="and" selected>Both (RSI and Stoch)</option><option value="or">Either one</option></select></div>
+    <div><label>Exit rule</label><select id="ix1Xjoin"><option value="or" selected>Either one</option><option value="and">Both together</option></select></div>
+    <div><label>Lots</label><input type="number" id="ix1Lots" style="width:70px" value="1" min="1"></div>
+    <div><label>Lot size (0 = auto)</label><input type="number" id="ix1Lot" style="width:110px" value="0" min="0"></div>
+    <div><label>Roll (days before expiry)</label><input type="number" id="ix1Roll" style="width:110px" value="3" min="0" max="15"></div>
+    <div><label>From</label><input type="date" id="ix1From"></div>
+    <div><label>To</label><input type="date" id="ix1To"></div>
+    <button onclick="ix1Run()">Run back-test</button>
+    <button class="ghost" onclick="ix1Download('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="ix1Download('csv')">Download CSV</button>
+  </div>
+  <div class="status" id="ix1Status">Buys one lot of the index future when the daily RSI and Stochastic %K of the index are both oversold, and exits when either turns. Positions roll to the next month a few days before expiry — the roll cost is charged to the trade.</div>
+  <div class="row" id="ix1Summary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:280px"><canvas id="ix1Chart"></canvas></div>
+  <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="ix1Tbl"></table></div>
+  <div class="section-head" style="margin-top:18px">Spread paid at each roll</div>
+  <div class="tblwrap" style="max-height:260px"><table id="ix1Roll"></table></div>
+</div>
+
+<!-- INDEX STRATEGY 2: BUY GRID -->
+<div class="card hidden" id="pane-ix2">
+  <div class="section-head">Buy Grid — add a lot every N points down, release one every N points up</div>
+  <div class="row">
+    <div><label>Instrument</label><select id="ix2Sym" style="width:150px"></select></div>
+    <div><label>Grid step (points)</label><input type="number" id="ix2Step" style="width:110px" value="100" min="5"></div>
+    <div><label>Max lots open</label><input type="number" id="ix2Max" style="width:100px" value="10" min="1"></div>
+    <div><label>Lot size (0 = auto)</label><input type="number" id="ix2Lot" style="width:110px" value="0" min="0"></div>
+    <div><label>Roll (days before expiry)</label><input type="number" id="ix2Roll" style="width:110px" value="3" min="0" max="15"></div>
+    <div><label>From</label><input type="date" id="ix2From"></div>
+    <div><label>To</label><input type="date" id="ix2To"></div>
+    <button onclick="ixGridRun('ix2')">Run back-test</button>
+    <button class="ghost" onclick="ixGridDownload('ix2','xlsx')">Download Excel</button>
+    <button class="ghost" onclick="ixGridDownload('ix2','csv')">Download CSV</button>
+  </div>
+  <div class="status" id="ix2Status">Long-only grid on round levels (24,600 · 24,500 · …). Each line crossed downwards buys a lot; each line crossed upwards releases the lot resting one step below. Gaps are priced honestly: if the day opens past several lines, every one of those orders fills at the open, so a 500-point gap up sells five lots there and pays far more than one step. It never goes net short.</div>
+  <div class="row" id="ix2Summary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:280px"><canvas id="ix2Chart"></canvas></div>
+  <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="ix2Tbl"></table></div>
+  <div class="section-head" style="margin-top:18px">Spread paid at each roll</div>
+  <div class="tblwrap" style="max-height:260px"><table id="ix2Roll"></table></div>
+</div>
+
+<!-- INDEX STRATEGY 3: SHORT GRID -->
+<div class="card hidden" id="pane-ix3">
+  <div class="section-head">Short Grid — sell a lot every N points up, cover one every N points down</div>
+  <div class="row">
+    <div><label>Instrument</label><select id="ix3Sym" style="width:150px"></select></div>
+    <div><label>Grid step (points)</label><input type="number" id="ix3Step" style="width:110px" value="100" min="5"></div>
+    <div><label>Max lots open</label><input type="number" id="ix3Max" style="width:100px" value="10" min="1"></div>
+    <div><label>Lot size (0 = auto)</label><input type="number" id="ix3Lot" style="width:110px" value="0" min="0"></div>
+    <div><label>Roll (days before expiry)</label><input type="number" id="ix3Roll" style="width:110px" value="3" min="0" max="15"></div>
+    <div><label>From</label><input type="date" id="ix3From"></div>
+    <div><label>To</label><input type="date" id="ix3To"></div>
+    <button onclick="ixGridRun('ix3')">Run back-test</button>
+    <button class="ghost" onclick="ixGridDownload('ix3','xlsx')">Download Excel</button>
+    <button class="ghost" onclick="ixGridDownload('ix3','csv')">Download CSV</button>
+  </div>
+  <div class="status" id="ix3Status">Short-only grid — the mirror of the buy grid. Each line crossed upwards sells a lot; each line crossed downwards covers the short resting one step above. Gap opens fill at the open, not at the line, so a big gap down covers several shorts at once for more than a step each. It never goes net long.</div>
+  <div class="row" id="ix3Summary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:280px"><canvas id="ix3Chart"></canvas></div>
+  <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="ix3Tbl"></table></div>
+  <div class="section-head" style="margin-top:18px">Spread received at each roll</div>
+  <div class="tblwrap" style="max-height:260px"><table id="ix3Roll"></table></div>
+</div>
+
+<!-- INDEX STRATEGY 4: ROLLOVER / CARRY COST -->
+<div class="card hidden" id="pane-ix4">
+  <div class="section-head">Rollover — what carrying a position to the next month costs</div>
+  <div class="row">
+    <div><label>Instrument</label><select id="ix4Sym" style="width:150px"></select></div>
+    <div><label>Check this many days before expiry</label><input type="number" id="ix4Days" style="width:110px" value="3" min="0" max="15"></div>
+    <div><label>From</label><input type="date" id="ix4From"></div>
+    <div><label>To</label><input type="date" id="ix4To"></div>
+    <button onclick="ix4Run()">Show</button>
+    <button class="ghost" onclick="ix4Download('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="ix4Download('csv')">Download CSV</button>
+  </div>
+  <div class="status" id="ix4Status">Three trading days before each expiry, this compares the near month with the next month. A positive spread is what a long pays to carry forward (and what a short receives); a negative spread is the reverse.</div>
+  <div id="ix4Now" style="margin-top:10px"></div>
+  <div class="row" id="ix4Summary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:260px"><canvas id="ix4Chart"></canvas></div>
+  <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="ix4Tbl"></table></div>
+</div>
+
 <!-- SAVED RUNS -->
 <div class="card hidden" id="pane-sr">
   <div class="section-head">Saved Runs</div>
@@ -447,9 +542,10 @@ a{color:var(--accent);}
     <button class="ghost" onclick="connectSaveFolder()">📂 Connect MEGA-synced folder</button>
     <button class="ghost" onclick="document.getElementById('srFile').click()">📄 Open a run file…</button>
     <button class="ghost" onclick="pushAllRuns()">📂 Push all saved runs to folder</button>
+    <button class="ghost" onclick="pullSharedRuns()">☁ Import runs from another device</button>
     <input type="file" id="srFile" accept=".json" style="display:none" onchange="loadRunFile(this.files[0])">
   </div>
-  <div class="status" id="srStatus">Saved runs live in this browser AND, once you connect a folder inside your MEGA-synced Data folder (e.g. Data\saved_runs), every 💾 Save also writes the Excel + run file there — MEGA uploads them automatically.</div>
+  <div class="status" id="srStatus">Strategies are per device: this browser keeps its own runs and P&L. Connect a folder to also save the Excel + run file, and use Import only if you deliberately want another device's run here.</div>
   <div class="tblwrap"><table id="srTbl"></table></div>
 </div>
 
@@ -503,6 +599,56 @@ a{color:var(--accent);}
   </div>
 </div>
 
+<!-- TRACKED WEEKLY CHANGE (feeds the P&L home page) -->
+<div class="card hidden" id="pane-tw">
+  <div class="section-head">Weekly Change (tracked) — one swap each week, ranked on monthly RSI</div>
+  <div id="twSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="twDate"></div>
+      <div><label>RSI (monthly) min</label><input type="number" id="twRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="twMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="twAmt" style="width:120px" value="100000"></div>
+      <div class="hidden"><input type="checkbox" id="twNextM"></div>
+      <button onclick="STRATS.tw.screen()">Screen shares</button>
+      <button class="ghost hidden" id="twStartBtn" onclick="STRATS.tw.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="twSetupStatus">This is the tracked copy — it feeds the Daily P&L home page, so leave it alone once it is running and experiment in the RSI Strategy version instead.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('tw',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('tw',false)">Unselect all</button><span class="pill" id="twPickCount"></span></div>
+    <div class="tblwrap"><table id="twPickTbl"></table></div>
+  </div>
+  <div id="twRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="twHead" style="font-size:14px"></div>
+      <div>
+        <button id="twNextBtn" onclick="STRATS.tw.advance()">Next week ▶</button>
+        <button class="ghost" id="twRunAllBtn" onclick="STRATS.tw.runTillToday()">⏩ Run till today</button>
+        <button class="ghost" onclick="STRATS.tw.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('tw')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.tw.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="twSwapRow">
+      <div id="twSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.tw.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.tw.apply(false)">No change this week</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="twChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="twChart2"></canvas></div>
+    <div class="row" id="twInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="twHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — weekly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="twLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
 <!-- RAW DATA: MONTHLY RSI -->
 <div class="card hidden" id="pane-mr">
   <div class="section-head">Monthly RSI — shares above a level, month by month</div>
@@ -536,9 +682,166 @@ a{color:var(--accent);}
     <button class="ghost" onclick="plDownload()">Download Excel</button>
   </div>
   <div class="status" id="plStatus">Values your current holdings in each strategy at every day's close, so you can see how each one is doing day by day.</div>
+  <div id="plRollAlert" style="margin-top:10px"></div>
   <div class="row" id="plCards" style="margin-top:12px;gap:14px;align-items:stretch"></div>
   <div class="chartbox" style="height:300px"><canvas id="plChart"></canvas></div>
   <div class="tblwrap" style="max-height:460px;margin-top:12px"><table id="plTbl"></table></div>
+</div>
+
+<!-- TRACKED (P&L) STRATEGIES -->
+<div class="card hidden" id="pane-ta">
+  <div class="section-head">All Change — automatic Top-N RSI portfolio, rebalanced monthly</div>
+  <div id="taSetup">
+    <div class="row">
+      <div><label>Start month</label>
+        <select id="taMonth">
+          <option value="01">January</option><option value="02">February</option><option value="03" selected>March</option>
+          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select></div>
+      <div><label>Start year</label><select id="taYear"></select></div>
+      <div><label>Top N by RSI</label><input type="number" id="taN" style="width:80px" value="25"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="taMc" style="width:110px" value="5000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="taAmt" style="width:120px" value="100000"></div>
+      <button onclick="acRun('ta')">Run till today ▶</button>
+    </div>
+    <div class="status" id="taSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
+    <div class="hidden"><table id="taPickTbl"></table><button id="taStartBtn"></button></div>
+  </div>
+  <div id="taRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="taHead" style="font-size:14px"></div>
+      <div>
+        <button id="taNextBtn" class="hidden"></button>
+        <button class="ghost" onclick="STRATS.ta.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('ta')">💾 Save run</button>
+        <button class="ghost" onclick="acReset('ta')">↺ New run</button>
+      </div>
+    </div>
+    <div class="hidden" id="taSwapRow"><div id="taSwaps"></div></div>
+    <div class="chartbox" style="height:300px"><canvas id="taChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('ac',2,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('ac',2,1)">▶</button>
+      <canvas id="taChart2"></canvas></div>
+    <div class="chartbox" style="height:190px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('ac',3,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('ac',3,1)">▶</button>
+      <canvas id="taChart3"></canvas></div>
+    <div class="row" id="taInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings (current Top N)</div>
+      <div class="tblwrap" style="max-height:260px"><table id="taHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — monthly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="taLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+<div class="card hidden" id="pane-t1">
+  <div class="section-head">One Change Strategy — one swap per month, RSI rotation</div>
+  <div id="t1Setup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="t1Date"></div>
+      <div><label>RSI (monthly) min</label><input type="number" id="t1Rsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="t1Mc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="t1Amt" style="width:120px" value="100000"></div>
+      <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t1NextM"></div>
+      <button onclick="STRATS.t1.screen()">Screen shares</button>
+      <button class="ghost hidden" id="t1StartBtn" onclick="STRATS.t1.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="t1SetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('t1',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('t1',false)">Unselect all</button><span class="pill" id="t1PickCount"></span></div>
+    <div class="tblwrap"><table id="t1PickTbl"></table></div>
+  </div>
+  <div id="t1Run" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="t1Head" style="font-size:14px"></div>
+      <div>
+        <button id="t1NextBtn" onclick="STRATS.t1.advance()">Next month ▶</button>
+        <button class="ghost" id="t1RunAllBtn" onclick="STRATS.t1.runTillToday()">⏩ Run till today</button>
+        <button class="ghost" onclick="STRATS.t1.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('t1')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.t1.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="t1SwapRow">
+      <div id="t1Swaps"></div>
+      <div class="row">
+        <button onclick="STRATS.t1.apply(true)">Apply changes</button>
+        <button class="ghost" onclick="STRATS.t1.apply(false)">No change this month</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="t1Chart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('st',2,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('st',2,1)">▶</button>
+      <canvas id="t1Chart2"></canvas></div>
+    <div class="row" id="t1Insights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="t1HoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — monthly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="t1LogTbl"></table></div>
+    </div>
+  </div>
+</div>
+<div class="card hidden" id="pane-t3">
+  <div class="section-head">Multi Change — you choose how many swaps per month</div>
+  <div id="t3Setup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="t3Date"></div>
+      <div><label>RSI (monthly) min</label><input type="number" id="t3Rsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="t3Mc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" value="100000"></div>
+      <div><label>Changes per month</label><input type="number" id="t3N" style="width:90px" value="2" min="1" max="10"></div>
+      <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t3NextM"></div>
+      <button onclick="STRATS.t3.screen()">Screen shares</button>
+      <button class="ghost hidden" id="t3StartBtn" onclick="STRATS.t3.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="t3SetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('t3',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('t3',false)">Unselect all</button><span class="pill" id="t3PickCount"></span></div>
+    <div class="tblwrap"><table id="t3PickTbl"></table></div>
+  </div>
+  <div id="t3Run" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="t3Head" style="font-size:14px"></div>
+      <div>
+        <button id="t3NextBtn" onclick="STRATS.t3.advance()">Next month ▶</button>
+        <button class="ghost" id="t3RunAllBtn" onclick="STRATS.t3.runTillToday()">⏩ Run till today</button>
+        <button class="ghost" onclick="STRATS.t3.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('t3')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.t3.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="t3SwapRow">
+      <div id="t3Swaps"></div>
+      <div class="row">
+        <button onclick="STRATS.t3.apply(true)">Apply changes</button>
+        <button class="ghost" onclick="STRATS.t3.apply(false)">No change this month</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="t3Chart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('mc',2,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('mc',2,1)">▶</button>
+      <canvas id="t3Chart2"></canvas></div>
+    <div class="row" id="t3Insights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="t3HoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — monthly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="t3LogTbl"></table></div>
+    </div>
+  </div>
 </div>
 
 <!-- CHART -->
@@ -677,9 +980,76 @@ function parseCSV(text){
   return lines.slice(1).map(l=>{
     const c=l.split(',').map(v=>v.trim()); const o={};
     head.forEach((h,i)=>o[h]=c[i]);
-    ['open','high','low','close','vol','rsi14','mcap_cr','rsi_d','rsi_w','rsi_m','chg_d','chg_w','chg_m','o_d','o_w','o_m','stoch_k','stoch_d'].forEach(k=>{if(k in o)o[k]=o[k]===''?null:+o[k];});
+    ['open','high','low','close','vol','rsi14','mcap_cr','rsi_d','rsi_w','rsi_m','chg_d','chg_w','chg_m','o_d','o_w','o_m','stoch_k','stoch_d',
+     'settle','oi','lot','dte','next_close','far_close','spot','basis','basis_pct','roll','roll_pct','roll_ann'].forEach(k=>{if(k in o)o[k]=o[k]===''?null:+o[k];});
     return o;
   });
+}
+async function fetchText(relPath){
+  if(MODE==='local'){
+    const parts=relPath.split('/'); let d=DIR;
+    for(let i=0;i<parts.length-1;i++) d=await d.getDirectoryHandle(parts[i]);
+    const fh=await d.getFileHandle(parts[parts.length-1]);
+    return await (await fh.getFile()).text();
+  }
+  if(MODE==='mega'){
+    const node=MEGAMAP.get(relPath)||MEGAMAP.get('github_export/'+relPath);
+    if(!node)throw new Error(relPath+' not found');
+    const buf=await node.downloadBuffer();
+    return new TextDecoder().decode(buf);
+  }
+  const r=await fetch(relPath,{cache:'no-cache'});
+  if(!r.ok)throw new Error(relPath+' -> '+r.status);
+  return await r.text();
+}
+// list run files shared through MEGA (or the local folder)
+async function listSharedRuns(){
+  const out=[];
+  if(MODE==='mega'&&MEGAMAP){
+    for(const k of MEGAMAP.keys()){
+      const i=k.indexOf('runs/');
+      if(i>=0&&k.endsWith('.json'))out.push(k.slice(i));
+    }
+  } else if(MODE==='local'&&DIR){
+    try{
+      const rd=await DIR.getDirectoryHandle('runs');
+      for await(const n of rd.keys()) if(n.endsWith('.json'))out.push('runs/'+n);
+    }catch(e){}
+  }
+  return out;
+}
+// pull shared runs into this device and revive the newest run of each strategy
+async function syncSharedRuns(){
+  let files=[];
+  try{files=await listSharedRuns();}catch(e){}
+  if(!files.length)return 0;
+  const local=getRuns(); const have=new Set(local.map(r=>r.id));
+  const newest={}; let added=0;
+  for(const f of files.slice(0,80)){
+    try{
+      const run=JSON.parse(await fetchText(f));
+      if(!run||!run.type||!run.payload)continue;
+      if(!have.has(run.id)){local.unshift(run); have.add(run.id); added++;}
+      if(!newest[run.type]||run.id>newest[run.type].id)newest[run.type]=run;
+    }catch(e){}
+  }
+  if(added){try{putRuns(local);}catch(e){}}
+  // if this device has no live run for a strategy, adopt the newest shared one
+  ['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>{
+    const r=newest[p];
+    if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
+      try{
+        STRATS[p].S=r.payload;
+        const setup=document.getElementById(p+'Setup'), run_=document.getElementById(p+'Run');
+        if(setup&&run_){setup.classList.add('hidden');run_.classList.remove('hidden');}
+        const sw=document.getElementById(p+'SwapRow'); if(sw)sw.classList.add('hidden');
+        const nb=document.getElementById(p+'NextBtn'); if(nb)nb.disabled=false;
+        STRATS[p].render('loaded from your shared runs - '+r.name);
+        localStorage.setItem('strat_'+p,JSON.stringify(r.payload));
+      }catch(e){}
+    }
+  });
+  return files.length;
 }
 async function loadSeries(kind,id){ // kind 'eq'|'ix'
   const key=kind+'/'+id;
@@ -733,10 +1103,11 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{STRATS.st.restore();STRATS.mc.restore();STRATS.ac.restore();STRATS.wk.restore();STRATS.sx.restore();}catch(e){}
+  try{['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
-  // home page is Daily P&L - load it straight away
+  // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
+  try{FUTC.clear(); ixRollAlert();}catch(e){}
 }
 let NAMEMAP={};
 function showOffline(msg){
@@ -816,7 +1187,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ss','sh','sr','pl','chart','screener','analyse','export'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -1459,7 +1830,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),t3:makeStrategy('t3',null,'Tracked Multi Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -1689,15 +2060,16 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
   };
 })();
 
-async function acRun(){
-  const start=document.getElementById('acYear').value+'-'+document.getElementById('acMonth').value;
-  const topN=Math.max(2,Math.min(+document.getElementById('acN').value||25,100));
-  const mcMin=+document.getElementById('acMc').value||0;
-  const amt=+document.getElementById('acAmt').value||100000;
+async function acRun(P){
+  P=P||'ac';
+  const start=document.getElementById(P+'Year').value+'-'+document.getElementById(P+'Month').value;
+  const topN=Math.max(2,Math.min(+document.getElementById(P+'N').value||25,100));
+  const mcMin=+document.getElementById(P+'Mc').value||0;
+  const amt=+document.getElementById(P+'Amt').value||100000;
   const dates=await getScanDates();
-  if(!dates||!dates.length){setS('acSetupStatus','Data not connected yet.','warn');return;}
+  if(!dates||!dates.length){setS(P+'SetupStatus','Data not connected yet.','warn');return;}
   const lastMonth=dates[dates.length-1].slice(0,7);
-  if(start>lastMonth){setS('acSetupStatus','Start month is beyond available data.','warn');return;}
+  if(start>lastMonth){setS(P+'SetupStatus','Start month is beyond available data.','warn');return;}
   let months=[]; let [y,m]=start.split('-').map(Number);
   while(true){const k=`${y}-${String(m).padStart(2,'0')}`; if(k>lastMonth)break; months.push(k); m++; if(m>12){m=1;y++;}}
   // month-end discipline: only rebalance on COMPLETED months — the latest data month
@@ -1705,11 +2077,11 @@ async function acRun(){
   const lastOf={}; dates.forEach(d=>{lastOf[d.slice(0,7)]=d;});
   months=months.filter(k=>k<lastMonth||(lastOf[k]&&+lastOf[k].slice(8,10)>=28));
   const S={rmin:null,mmin:mcMin,amt,holdings:[],log:[],series:[],month:start,invested:0,screenDate:null};
-  STRATS.ac.S=S;
+  STRATS[P].S=S;
   let first=true, i=0;
   for(const mth of months){
     i++;
-    setS('acSetupStatus',`running ${mth}… (${i}/${months.length})`,'');
+    setS(P+'SetupStatus',`running ${mth}… (${i}/${months.length})`,'');
     let sc=null;
     try{sc=await loadScanByMonth(mth);}catch(e){}
     if(!sc)continue;
@@ -1722,9 +2094,9 @@ async function acRun(){
         const nRsi=sc.rows.filter(r=>r.rsi_m!=null).length;
         const nMc=sc.rows.filter(r=>r.mcap_cr!=null).length;
         const maxMc=sc.rows.reduce((a,r)=>Math.max(a,r.mcap_cr||0),0);
-        setS('acSetupStatus',
+        setS(P+'SetupStatus',
           `Nothing qualified in ${mth} (file ${sc.date}): ${nRows} rows, ${nRsi} with monthly RSI, ${nMc} with market cap, biggest mcap Rs ${fmt0(maxMc)} cr vs your filter Rs ${fmt0(mcMin)} cr.`,'warn');
-        STRATS.ac.S=null; return;
+        STRATS[P].S=null; return;
       }
       S.screenDate=sc.date; S.month=mth;
       top.forEach(r=>S.holdings.push({sym:r.symbol,units:amt/r.close,buyPrice:r.close,cost:amt,lastClose:r.close,rsi:r.rsi_m,buyMonth:mth}));
@@ -1766,23 +2138,24 @@ async function acRun(){
     S.series.push({month:mth,value:S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0)});
   }
   if(!S.series.length||!S.holdings.length||!S.invested){
-    setS('acSetupStatus','No shares matched your filters in that period - check the RSI/mcap levels, or wait for MEGA to finish syncing the data, then run again.','warn');
-    STRATS.ac.S=null; return;
+    setS(P+'SetupStatus','No shares matched your filters in that period - check the RSI/mcap levels, or wait for MEGA to finish syncing the data, then run again.','warn');
+    STRATS[P].S=null; return;
   }
   try{
     const nrows=await loadSeries('ix','NIFTY_50');
     S.nifty={}; nrows.forEach(r=>{S.nifty[r.date.slice(0,7)]=r.close;});
   }catch(e){S.nifty=null;}
   S.niftyBase=S.nifty?S.nifty[S.series[0].month]:null;
-  document.getElementById('acSetup').classList.add('hidden');
-  document.getElementById('acRun').classList.remove('hidden');
-  try{localStorage.setItem('strat_ac',JSON.stringify(S));}catch(e){}
-  STRATS.ac.render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ≥ ₹${fmt0(mcMin)} cr`);
-  setS('acSetupStatus','done','ok');
+  document.getElementById(P+'Setup').classList.add('hidden');
+  document.getElementById(P+'Run').classList.remove('hidden');
+  try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
+  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ≥ ₹${fmt0(mcMin)} cr`);
+  setS(P+'SetupStatus','done','ok');
 }
-function acReset(){
-  STRATS.ac.reset();
-  setS('acSetupStatus','Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.','');
+function acReset(P){
+  P=P||'ac';
+  STRATS[P].reset();
+  setS(P+'SetupStatus','Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.','');
 }
 
 /* ============ chart tab ============ */
@@ -2243,7 +2616,7 @@ function shDownload(kind){
 }
 
 /* ============ saved runs ============ */
-const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
+const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ta:'Tracked All Change',t1:'Tracked One Change',t3:'Tracked Multi Change',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
 // ---- MEGA-synced folder handle (persisted in IndexedDB) ----
 function idbKV(){return new Promise((res,rej)=>{const q=indexedDB.open('btp',1);
   q.onupgradeneeded=()=>q.result.createObjectStore('kv');
@@ -2296,6 +2669,9 @@ async function folderSave(run){
   try{dir=await getRunDir();}catch(e){}
   if(!dir)return false;
   try{
+  // keep runs in a "runs" subfolder - if the chosen folder is github_export,
+  // MEGA then shares them with every device that opens the site
+  try{dir=await dir.getDirectoryHandle('runs',{create:true});}catch(e){}
   const safe=run.name.replace(/[^\w\- ]+/g,'_').slice(0,60);
   // run file (reopenable via “Open a run file…”)
   let fh=await dir.getFileHandle(safe+'.json',{create:true});
@@ -2311,7 +2687,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -2339,7 +2715,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -2388,7 +2764,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -2419,7 +2795,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -2429,6 +2805,13 @@ function runExcel(id){
     const prev=SHRES; SHRES=r.payload.res;
     try{shDownload('xlsx');}finally{SHRES=prev;}
   }
+}
+async function pullSharedRuns(){
+  setS('srStatus','looking for shared runs…','');
+  const n=await syncSharedRuns();
+  renderSavedRuns();
+  setS('srStatus',n?`Found ${n} shared run file(s) - anything new was added and the latest run of each strategy is now live on this device.`
+                  :'No shared runs found. On the PC: Tools -> Saved Runs -> Connect folder -> pick the github_export folder, then Push all saved runs.','ok');
 }
 async function pushRun(id){
   const r=findRun(id); if(!r)return;
@@ -2506,8 +2889,8 @@ function mrDownload(kind){
 }
 
 /* ============ daily P&L tracker ============ */
-const PLDEFS=[['ac','All Change','#3fb950'],['st','One Change','#2f81f7'],
-              ['mc','Multi Change','#a371f7'],['wk','Weekly Change','#d29922']];
+// distinct, bright, and deliberately NOT green — the ₹ figures are already green/red
+const PLDEFS=[['ta','All Change','#22d3ee'],['t3','Multi Change','#c084fc'],['tw','Weekly Change','#fbbf24']];
 let PLDATA=null, plChartObj=null;
 function plInit(){ if(!PLDATA)plRefresh(); }
 async function plRefresh(){
@@ -2565,9 +2948,14 @@ function plRender(){
     const mtd=(v!=null&&base!=null)?v-base:null;
     const mtdPct=(mtd!=null&&base)?mtd/base*100:null;
     const tot=(v!=null&&s.invested)?(v-s.invested)/s.invested*100:null;
-    return `<div class="subcard" style="flex:1;min-width:190px;margin-top:0">
-      <div style="font-weight:700;color:${s.color}">${s.label}</div>
-      <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">${s.holdings} holdings · last change ${s.lastBuy||'—'}</div>
+    return `<div class="subcard" style="flex:1;min-width:190px;margin-top:0;position:relative;overflow:hidden;
+        border-left:3px solid ${s.color};
+        background:linear-gradient(160deg,${s.color}1f 0%,${s.color}08 34%,transparent 72%);
+        box-shadow:0 2px 14px -6px ${s.color}66">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${s.color};box-shadow:0 0 8px ${s.color}"></span>
+        <span style="font-weight:700;letter-spacing:.2px;color:${s.color}">${s.label}</span></div>
+      <div style="font-size:11.5px;color:var(--muted);margin:3px 0 6px 16px">${s.holdings} holdings · last change ${s.lastBuy||'—'}</div>
       <div style="font-size:12px;color:var(--muted)">${dates[d0]}</div>
       <div style="font-size:18px;font-weight:700" class="${day==null?'':(day>=0?'pos':'neg')}">
         ${day==null?'—':(day>=0?'+':'')+'₹'+fmt0(Math.abs(day)*(day<0?-1:1))}
@@ -2584,9 +2972,11 @@ function plRender(){
   const labels=dates.slice(1);
   const dsets=series.map(s=>({label:s.label,
     data:labels.map((_,i)=>{const a=s.vals[i],b=s.vals[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
-    borderColor:s.color,backgroundColor:s.color,borderWidth:1.8,pointRadius:0,tension:.15,spanGaps:true}));
+    borderColor:s.color,backgroundColor:s.color+'22',borderWidth:2.4,pointRadius:0,pointHoverRadius:4,
+    pointHoverBackgroundColor:s.color,tension:.3,spanGaps:true,
+    borderCapStyle:'round',borderJoinStyle:'round'}));
   if(nifty)dsets.push({label:'NIFTY 50',data:labels.map((_,i)=>{const a=nifty[i],b=nifty[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
-    borderColor:'#8b949e',borderWidth:1.2,borderDash:[5,3],pointRadius:0,tension:.15,spanGaps:true});
+    borderColor:'#7d8998',borderWidth:1.4,borderDash:[6,4],pointRadius:0,tension:.3,spanGaps:true});
   if(plChartObj)plChartObj.destroy();
   plChartObj=new Chart(document.getElementById('plChart'),{type:'line',data:{labels,datasets:dsets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
@@ -2837,12 +3227,435 @@ async function runExport(kind){
 }
 
 /* ============ misc ============ */
+/* ============ INDEX STRATEGIES (index futures) ============ */
+const IXFUT=[
+  {sym:'NIFTY',      label:'Nifty 50',      ix:'NIFTY_50',                 lot:65,  step:100},
+  {sym:'BANKNIFTY',  label:'Bank Nifty',    ix:'NIFTY_BANK',               lot:30,  step:200},
+  {sym:'FINNIFTY',   label:'Fin Nifty',     ix:'NIFTY_FINANCIAL_SERVICES', lot:60,  step:100},
+  {sym:'MIDCPNIFTY', label:'Midcap Select', ix:'NIFTY_MIDCAP_SELECT',      lot:120, step:50},
+  {sym:'NIFTYNXT50', label:'Nifty Next 50', ix:'NIFTY_NEXT_50',            lot:25,  step:200}
+];
+const ixg=id=>document.getElementById(id);
+const ixv=id=>{const e=ixg(id);return e?e.value:'';};
+const ixn=id=>{const e=ixg(id);return e?+e.value:0;};
+const ixDef=s=>IXFUT.find(f=>f.sym===s)||IXFUT[0];
+const ixBox=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+const ixPM=v=>(v>=0?'+':'')+fmt(v);
+const ixPM0=v=>(v>=0?'+₹':'-₹')+fmt0(Math.abs(v));
+let FUTC=new Map(), IXCH={}, IX1RES=null, IXGRES={}, IX4RES=null;
+
+// futures series, falling back to the spot index until the F&O archive exists
+async function loadFut(sym){
+  if(FUTC.has(sym))return FUTC.get(sym);
+  const def=ixDef(sym); let rows=null, src='fut';
+  try{
+    rows=parseCSV(await fetchGz('data/fut/'+sym+'.csv.gz'));
+    if(!rows||!rows.length)rows=null;
+  }catch(e){ rows=null; }
+  if(!rows){
+    const ir=await loadSeries('ix',def.ix);
+    rows=ir.map(r=>({date:r.date,expiry:'',open:r.open,high:r.high,low:r.low,close:r.close,
+      lot:def.lot,dte:null,next_exp:'',next_close:null,spot:r.close,rsi14:r.rsi14,
+      stoch_k:r.stoch_k,stoch_d:r.stoch_d,roll:null,roll_pct:null,roll_ann:null}));
+    src='spot';
+  }
+  const o={rows,src,def}; FUTC.set(sym,o); return o;
+}
+// roll-adjusted continuous series: c/o/h/l are back-adjusted so P&L is already net of roll
+function ixSeries(rows,rollBefore){
+  const out=[]; let adj=0, prevExp=null;
+  for(const r of rows){
+    if(r.close==null)continue;
+    const useNext=(r.dte!=null&&r.next_close!=null&&r.dte<=rollBefore);
+    const exp=useNext?(r.next_exp||''):(r.expiry||'');
+    const px=useNext?r.next_close:r.close;
+    let rp=0;
+    if(prevExp!==null&&exp!==prevExp&&r.roll!=null){rp=r.roll;adj+=rp;}
+    prevExp=exp;
+    // on the bars where we already hold the far contract the high/low belong to the
+    // expiring one, so fall back to the close for those few days
+    const hi=useNext?px:(r.high!=null?r.high:px);
+    const lo=useNext?px:(r.low!=null?r.low:px);
+    const op=useNext?px:(r.open!=null?r.open:px);
+    out.push({date:r.date,exp,px,adj,c:px-adj,o:op-adj,h:hi-adj,l:lo-adj,
+      rsi:r.rsi14,k:r.stoch_k,dk:r.stoch_d,spot:r.spot,roll:rp,dte:r.dte,lot:r.lot});
+  }
+  return out;
+}
+const ixSlice=(S,f,t)=>S.filter(r=>(!f||r.date>=f)&&(!t||r.date<=t));
+function ixLotSize(S,def,manual){
+  if(manual>0)return manual;
+  for(let i=S.length-1;i>=0;i--) if(S[i].lot>0) return S[i].lot;
+  return def.lot;
+}
+function ixDD(eq){let pk=-Infinity,dd=0;for(const v of eq){if(v>pk)pk=v;if(pk-v>dd)dd=pk-v;}return dd;}
+function ixChart(id,labels,dsets,yTitle){
+  if(IXCH[id]){try{IXCH[id].destroy();}catch(e){}IXCH[id]=null;}
+  IXCH[id]=new Chart(ixg(id),{type:'line',data:{labels,datasets:dsets},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      interaction:{mode:'index',intersect:false},elements:{point:{radius:0}},
+      plugins:{legend:{labels:{color:'#c9d1d9',boxWidth:12}}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'rgba(255,255,255,.05)'}},
+              y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,.05)'},
+                 title:{display:!!yTitle,text:yTitle||'',color:'#8b949e'}},
+              y1:{position:'right',display:dsets.some(d=>d.yAxisID==='y1'),
+                 ticks:{color:'#d29922'},grid:{drawOnChartArea:false}}}}});
+}
+function ixTable(id,head,rows){
+  ixg(id).innerHTML='<thead><tr>'+head.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(r=>'<tr>'+r.map(c=>`<td>${c==null?'':c}</td>`).join('')+'</tr>').join('')+'</tbody>';
+}
+function ixExport(kind,head,rows,name,statusId,extra){
+  try{
+    if(!rows.length){setS(statusId,'Run it first.','warn');return;}
+    if(kind==='xlsx'){
+      const wb=XLSX.utils.book_new();
+      const ws=XLSX.utils.aoa_to_sheet([head].concat(rows));
+      ws['!cols']=head.map(()=>({wch:14}));
+      XLSX.utils.book_append_sheet(wb,ws,'Result');
+      if(extra&&extra.rows&&extra.rows.length){
+        const w2=XLSX.utils.aoa_to_sheet([extra.head].concat(extra.rows));
+        w2['!cols']=extra.head.map(()=>({wch:16}));
+        XLSX.utils.book_append_sheet(wb,w2,extra.name||'Carry');
+      }
+      if(window.__wbSink)window.__wbSink(wb,name+'.xlsx'); else XLSX.writeFile(wb,name+'.xlsx');
+    }else{
+      const esc=v=>{v=String(v==null?'':v);return v.includes(',')?'"'+v+'"':v;};
+      dl(new Blob([[head.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),name+'.csv');
+    }
+    setS(statusId,`Exported ${rows.length} rows.`,'ok');
+  }catch(e){setS(statusId,'Download failed: '+e.message,'warn');}
+}
+function ixNote(F){
+  return F.src==='spot'
+    ? ' — no F&O archive yet, so this ran on the index level itself (run Download-FO.ps1 to get real futures prices and roll costs).'
+    : '';
+}
+
+/* ---- Strategy 1: RSI + Stoch on index futures ---- */
+async function ix1Run(){
+  if(!MANIFEST){setS('ix1Status','Not connected to data yet.','warn');return;}
+  const sym=ixv('ix1Sym'), rb=Math.max(0,ixn('ix1Roll'));
+  setS('ix1Status','Loading '+sym+' …');
+  let F; try{F=await loadFut(sym);}catch(e){setS('ix1Status','Could not load '+sym+': '+e.message,'warn');return;}
+  const S=ixSlice(ixSeries(F.rows,rb),ixv('ix1From'),ixv('ix1To'));
+  if(S.length<20){setS('ix1Status','Not enough data in that date range.','warn');return;}
+  const rB=ixn('ix1RsiB'),kB=ixn('ix1StB'),rS=ixn('ix1RsiS'),kS=ixn('ix1StS');
+  const inAnd=ixv('ix1Join')==='and', outAnd=ixv('ix1Xjoin')==='and';
+  const lots=Math.max(1,ixn('ix1Lots')), lotSz=ixLotSize(S,F.def,ixn('ix1Lot'));
+  const mult=lots*lotSz;
+  const trades=[]; const eq=[]; const labels=[]; const rolls=[];
+  let pos=null, cum=0, rollAll=0;
+  for(let i=0;i<S.length;i++){
+    const r=S[i], hasR=r.rsi!=null, hasK=r.k!=null;
+    if(pos&&r.roll){ pos.roll+=r.roll; rollAll+=r.roll*mult;
+      rolls.push({date:r.date,exp:r.exp,lots:lots,pts:r.roll}); }
+    if(pos){
+      const a=hasR&&r.rsi>=rS, b=hasK&&r.k>=kS;
+      if(outAnd?(a&&b):(a||b)){
+        const pts=r.c-pos.c; cum+=pts;
+        trades.push({...pos,xd:r.date,xp:r.px,pts,xr:r.rsi,xk:r.k,days:i-pos.i,open:false});
+        pos=null;
+      }
+    }else if(hasR&&hasK){
+      const a=r.rsi<rB, b=r.k<kB;
+      if(inAnd?(a&&b):(a||b)) pos={i,d:r.date,p:r.px,c:r.c,er:r.rsi,ek:r.k,roll:0};
+    }
+    labels.push(r.date);
+    eq.push((cum+(pos?(S[i].c-pos.c):0))*mult);
+  }
+  if(pos){
+    const last=S[S.length-1];
+    trades.push({...pos,xd:last.date,xp:last.px,pts:last.c-pos.c,xr:last.rsi,xk:last.k,
+                 days:S.length-1-pos.i,open:true});
+  }
+  IX1RES={sym,trades,mult,lots,lotSz,src:F.src,rollAll,rolls};
+  const closed=trades.filter(t=>!t.open), wins=closed.filter(t=>t.pts>0).length;
+  const totPts=trades.reduce((s,t)=>s+t.pts,0);
+  const best=trades.reduce((m,t)=>t.pts>m?t.pts:m,-Infinity);
+  const worst=trades.reduce((m,t)=>t.pts<m?t.pts:m,Infinity);
+  const avgD=trades.length?trades.reduce((s,t)=>s+t.days,0)/trades.length:0;
+  ixg('ix1Summary').innerHTML=
+    ixBox('Trades',trades.length)+
+    ixBox('Win rate',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
+    ixBox('Total points',ixPM(totPts),totPts>=0?'pos':'neg')+
+    ixBox('Net P&L',ixPM0(totPts*mult),totPts>=0?'pos':'neg')+
+    ixBox('Best trade',ixPM(best===-Infinity?0:best),'pos')+
+    ixBox('Worst trade',ixPM(worst===Infinity?0:worst),'neg')+
+    ixBox('Avg days held',fmt(avgD,1))+
+    ixBox('Max drawdown','₹'+fmt0(ixDD(eq)),'neg')+
+    ixBox('Roll cost paid',ixPM0(-rollAll),rollAll>0?'neg':'pos')+
+    ixBox('Lot size',fmt0(lotSz)+' × '+lots);
+  ixChart('ix1Chart',labels,[{label:'Equity (₹)',data:eq,borderColor:'#3fb950',backgroundColor:'rgba(63,185,80,.12)',fill:true,borderWidth:2}],'₹');
+  ixTable('ix1Tbl',['#','Entry date','Entry','RSI','%K','Exit date','Exit','RSI','%K','Days','Roll pts','Points','P&L (₹)'],
+    trades.map((t,i)=>[i+1,t.d,fmt(t.p),fmt(t.er,1),fmt(t.ek,1),t.xd+(t.open?' (open)':''),fmt(t.xp),
+      fmt(t.xr,1),fmt(t.xk,1),t.days,ixPM(t.roll),
+      `<span class="${t.pts>=0?'pos':'neg'}">${ixPM(t.pts)}</span>`,
+      `<span class="${t.pts>=0?'pos':'neg'}">${ixPM0(t.pts*mult)}</span>`]));
+  ixTable('ix1Roll',['Roll date','Rolled out of','Lots carried','Spread (pts)','Spread per lot (₹)','Cost this roll (₹)'],
+    rolls.slice().reverse().slice(0,300).map(r=>{
+      const per=-r.pts*lotSz, tot=per*r.lots;
+      return [r.date,r.exp||'—',r.lots,ixPM(r.pts),
+        `<span class="${per<0?'neg':'pos'}">${ixPM0(per)}</span>`,
+        `<span class="${tot<0?'neg':'pos'}">${ixPM0(tot)}</span>`];
+    }));
+  if(!rolls.length)ixg('ix1Roll').innerHTML='<tbody><tr><td style="color:var(--muted)">'+
+    (F.src==='spot'?'No futures data yet — nothing was rolled, so no spread was paid.'
+                   :'No trade was held across an expiry in this range.')+'</td></tr></tbody>';
+  setS('ix1Status',`${trades.length} trades on ${ixDef(sym).label} — ${ixPM(totPts)} points, ${ixPM0(totPts*mult)}. `+
+    `Carry paid across ${rolls.length} roll(s): ${ixPM0(-rollAll)}.`+ixNote(F),
+       totPts>=0?'ok':'warn');
+}
+function ix1Download(kind){
+  if(!IX1RES)return setS('ix1Status','Run the back-test first.','warn');
+  const head=['#','Entry date','Entry price','Entry RSI','Entry %K','Exit date','Exit price','Exit RSI','Exit %K','Days','Roll points','Points','P&L (Rs)'];
+  const rows=IX1RES.trades.map((t,i)=>[i+1,t.d,t.p,t.er,t.ek,t.xd,t.xp,t.xr,t.xk,t.days,
+    +t.roll.toFixed(2),+t.pts.toFixed(2),Math.round(t.pts*IX1RES.mult)]);
+  const ch=['Roll date','Rolled out of','Lots carried','Spread points','Spread per lot (Rs)','Cost this roll (Rs)'];
+  const cr=IX1RES.rolls.map(r=>[r.date,r.exp,r.lots,+r.pts.toFixed(2),
+    Math.round(-r.pts*IX1RES.lotSz),Math.round(-r.pts*IX1RES.lotSz*r.lots)]);
+  ixExport(kind,head,rows,'index_rsi_stoch_'+IX1RES.sym,'ix1Status',{name:'Carry',head:ch,rows:cr});
+}
+
+/* ---- Strategies 2 & 3: grids ---- */
+function ixGridEngine(S,step,maxLots,side){
+  const open=[], closed=[], rolls=[], eq=[], labels=[];
+  let realised=0, maxOpen=0, rollAll=0, fullBars=0, gapFills=0, L=Math.floor(S[0].c/step), bar=S[0];
+  // idx = the grid line being crossed, fill = the price we actually get.
+  // Normally that is the line itself (a resting limit order). If the day OPENED past
+  // the line, the order fills at the open instead — that is what a gap does to a grid.
+  const cross=(idx,dir,fill)=>{
+    const lvl=idx*step, gap=(fill!==lvl);
+    if(gap)gapFills++;
+    if((side>0&&dir<0)||(side<0&&dir>0)){            // a step against us: add a lot
+      if(open.length<maxLots) open.push({idx,lvl:fill,d:bar.date,px:fill+bar.adj,gap});
+    }else if(open.length){                            // a step in our favour: release lots
+      const want=(side>0?idx-1:idx+1);                 // every lot whose target this passes
+      for(let j=open.length-1;j>=0;j--){
+        const t=open[j];
+        if(t.idx!==want)continue;
+        open.splice(j,1);
+        const pts=side>0?(fill-t.lvl):(t.lvl-fill);
+        realised+=pts;
+        closed.push({od:t.d,op:t.px,cd:bar.date,cp:fill+bar.adj,pts,gap:gap||t.gap});
+      }
+    }
+  };
+  // gapPx != null -> everything jumped over fills at that price
+  const walk=(to,gapPx)=>{
+    let guard=0;
+    while(L>to&&guard++<600){ const i=L; L--; cross(i,-1,gapPx==null?i*step:gapPx); }
+    while(L<to&&guard++<600){ const i=L+1; L++; cross(i,+1,gapPx==null?i*step:gapPx); }
+  };
+  for(let i=0;i<S.length;i++){
+    bar=S[i];
+    if(bar.roll){
+      rollAll+=open.length*bar.roll;
+      if(open.length)rolls.push({date:bar.date,exp:bar.exp,lots:open.length,pts:bar.roll});
+    }
+    walk(Math.floor(bar.o/step),bar.o);               // the opening gap, filled at the open
+    const path=(bar.c>=bar.o)?[bar.l,bar.h,bar.c]:[bar.h,bar.l,bar.c];
+    for(const p of path) walk(Math.floor(p/step),null); // then intraday, filled at the lines
+    if(open.length>maxOpen)maxOpen=open.length;
+    if(open.length>=maxLots)fullBars++;
+    const mtm=open.reduce((s,t)=>s+side*(bar.c-t.lvl),0);
+    labels.push(bar.date); eq.push(realised+mtm);
+  }
+  return {open,closed,rolls,eq,labels,realised,maxOpen,rollAll,fullBars,gapFills,
+          bars:S.length,last:S[S.length-1]};
+}
+async function ixGridRun(P){
+  if(!MANIFEST){setS(P+'Status','Not connected to data yet.','warn');return;}
+  const side=(P==='ix2')?1:-1, sym=ixv(P+'Sym'), rb=Math.max(0,ixn(P+'Roll'));
+  const step=Math.max(1,ixn(P+'Step')), maxLots=Math.max(1,ixn(P+'Max'));
+  setS(P+'Status','Loading '+sym+' …');
+  let F; try{F=await loadFut(sym);}catch(e){setS(P+'Status','Could not load '+sym+': '+e.message,'warn');return;}
+  const S=ixSlice(ixSeries(F.rows,rb),ixv(P+'From'),ixv(P+'To'));
+  if(S.length<20){setS(P+'Status','Not enough data in that date range.','warn');return;}
+  const lotSz=ixLotSize(S,F.def,ixn(P+'Lot'));
+  const R=ixGridEngine(S,step,maxLots,side);
+  const eqR=R.eq.map(v=>v*lotSz);
+  const last=R.last;
+  const openMTM=R.open.reduce((s,t)=>s+side*(last.c-t.lvl),0);
+  const net=R.realised+openMTM;
+  IXGRES[P]={sym,side,step,lotSz,R,net};
+  const avgPts=R.closed.length?R.realised/R.closed.length:0;
+  const bigT=R.closed.reduce((m,t)=>t.pts>m?t.pts:m,0);
+  const carry=-side*R.rollAll*lotSz;                 // negative = money out of pocket
+  ixg(P+'Summary').innerHTML=
+    ixBox('Round trips',R.closed.length)+
+    ixBox('Booked points','+'+fmt(R.realised),'pos')+
+    ixBox('Avg per trip',fmt(avgPts)+' pts','pos')+
+    ixBox('Best trip',fmt(bigT)+' pts','pos')+
+    ixBox('Booked P&L',ixPM0(R.realised*lotSz),'pos')+
+    ixBox('Lots open now',R.open.length+' / '+maxLots,R.open.length>=maxLots?'neg':'')+
+    ixBox('Open position P&L',ixPM0(openMTM*lotSz),openMTM>=0?'pos':'neg')+
+    ixBox('Net P&L',ixPM0(net*lotSz),net>=0?'pos':'neg')+
+    ixBox('Most lots held',R.maxOpen)+
+    ixBox('Max drawdown','₹'+fmt0(ixDD(eqR)),'neg')+
+    ixBox('Carry / spread paid',ixPM0(carry),carry<0?'neg':'pos')+
+    ixBox('Gap fills',R.gapFills)+
+    ixBox('Lot size',fmt0(lotSz));
+  const rl=R.rolls;
+  const rollPaid=rl.reduce((s,r)=>s+r.lots*r.pts*side*lotSz,0);
+  ixTable(P+'Roll',['Roll date','Rolled out of','Lots carried','Spread (pts)','Spread per lot (₹)','Cost this roll (₹)'],
+    rl.slice().reverse().slice(0,300).map(r=>{
+      const per=-side*r.pts*lotSz, tot=per*r.lots;
+      return [r.date,r.exp||'—',r.lots,ixPM(r.pts),
+        `<span class="${per<0?'neg':'pos'}">${ixPM0(per)}</span>`,
+        `<span class="${tot<0?'neg':'pos'}">${ixPM0(tot)}</span>`];
+    }));
+  if(!rl.length)ixg(P+'Roll').innerHTML='<tbody><tr><td style="color:var(--muted)">'+
+    (F.src==='spot'?'No futures data yet — nothing was rolled, so no spread was paid.'
+                   :'No position was open across any expiry in this range.')+'</td></tr></tbody>';
+  ixChart(P+'Chart',R.labels,[
+    {label:'Equity (₹)',data:eqR,borderColor:side>0?'#3fb950':'#f85149',
+     backgroundColor:side>0?'rgba(63,185,80,.12)':'rgba(248,81,73,.12)',fill:true,borderWidth:2}],'₹');
+  const rows=R.closed.slice(-400).reverse();
+  ixTable(P+'Tbl',['#',side>0?'Bought on':'Sold on',side>0?'Buy price':'Sell price',
+      side>0?'Sold on':'Covered on',side>0?'Sell price':'Cover price','Points','P&L (₹)','Fill'],
+    rows.map((t,i)=>[rows.length-i,t.od,fmt(t.op),t.cd,fmt(t.cp),
+      `<span class="${t.pts>=0?'pos':'neg'}">${ixPM(t.pts)}</span>`,
+      `<span class="${t.pts>=0?'pos':'neg'}">${ixPM0(t.pts*lotSz)}</span>`,
+      t.gap?'<span class="warn">gap</span>':'grid']));
+  const px=R.open.map(t=>t.px);
+  const openTxt=R.open.length?` Still open: ${R.open.length} lot(s) between ${fmt(Math.min(...px))} and ${fmt(Math.max(...px))}.`:'';
+  const fullPct=R.bars?R.fullBars/R.bars*100:0;
+  const fullTxt=fullPct>5?` The ladder was full on ${fullPct.toFixed(0)}% of days — raise "Max lots open" or widen the step to let it keep working.`:'';
+  const gapTxt=R.gapFills?` ${R.gapFills} fills happened on a gap, so they were priced at that day's open rather than at the grid line.`:'';
+  setS(P+'Status',`${R.closed.length} completed round trips on ${ixDef(sym).label}, ${fmt(step,0)}-point grid, `+
+    `averaging ${fmt(avgPts)} points each (best ${fmt(bigT)}). Net ${ixPM0(net*lotSz)}.`+openTxt+gapTxt+fullTxt+ixNote(F), net>=0?'ok':'warn');
+}
+function ixGridDownload(P,kind){
+  const G=IXGRES[P];
+  if(!G)return setS(P+'Status','Run the back-test first.','warn');
+  const head=['#',G.side>0?'Bought on':'Sold on','Entry price',G.side>0?'Sold on':'Covered on','Exit price','Points','P&L (Rs)'];
+  head.push('Fill');
+  const rows=G.R.closed.map((t,i)=>[i+1,t.od,+t.op.toFixed(2),t.cd,+t.cp.toFixed(2),
+    +t.pts.toFixed(2),Math.round(t.pts*G.lotSz),t.gap?'gap':'grid']);
+  G.R.open.forEach(t=>rows.push([rows.length+1,t.d,+t.px.toFixed(2),'OPEN','','','',t.gap?'gap':'grid']));
+  const ch=['Roll date','Rolled out of','Lots carried','Spread points','Spread per lot (Rs)','Cost this roll (Rs)'];
+  const cr=G.R.rolls.map(r=>[r.date,r.exp,r.lots,+r.pts.toFixed(2),
+    Math.round(-G.side*r.pts*G.lotSz),Math.round(-G.side*r.pts*G.lotSz*r.lots)]);
+  ixExport(kind,head,rows,(P==='ix2'?'buy_grid_':'short_grid_')+G.sym,P+'Status',
+    {name:'Carry',head:ch,rows:cr});
+}
+
+/* ---- Strategy 4: rollover / carry cost ---- */
+function ixRollTable(rows,days){
+  const byExp=new Map();
+  for(const r of rows){
+    if(!r.expiry||r.next_close==null||r.dte==null)continue;
+    if(r.dte<days)continue;
+    const cur=byExp.get(r.expiry);
+    if(!cur||r.dte<cur.dte)byExp.set(r.expiry,r);   // the row closest to `days` from above
+  }
+  return [...byExp.values()].sort((a,b)=>a.expiry<b.expiry?-1:1);
+}
+async function ix4Run(){
+  if(!MANIFEST){setS('ix4Status','Not connected to data yet.','warn');return;}
+  const sym=ixv('ix4Sym'), days=Math.max(0,ixn('ix4Days'));
+  setS('ix4Status','Loading '+sym+' …');
+  let F; try{F=await loadFut(sym);}catch(e){setS('ix4Status','Could not load '+sym+': '+e.message,'warn');return;}
+  if(F.src==='spot'){
+    ixg('ix4Now').innerHTML='';ixg('ix4Summary').innerHTML='';ixg('ix4Tbl').innerHTML='';
+    setS('ix4Status','No futures prices yet. Run Download-FO.ps1 once (it fetches the F&O bhavcopy), then the daily update keeps it current — this page needs real near/next month prices.','warn');
+    return;
+  }
+  const rows=ixSlice(F.rows,ixv('ix4From'),ixv('ix4To'));
+  const T=ixRollTable(rows,days);
+  if(!T.length){setS('ix4Status','No expiries with both months priced in that range.','warn');return;}
+  IX4RES={sym,T,days};
+  const spreads=T.map(r=>r.roll), anns=T.map(r=>r.roll_ann).filter(v=>v!=null);
+  const avg=spreads.reduce((s,v)=>s+v,0)/spreads.length;
+  const avgP=T.map(r=>r.roll_pct).reduce((s,v)=>s+v,0)/T.length;
+  const avgA=anns.length?anns.reduce((s,v)=>s+v,0)/anns.length:null;
+  const costly=spreads.filter(v=>v>0).length;
+  // where we stand right now
+  const live=F.rows[F.rows.length-1];
+  const lot=ixLotSize(ixSeries(F.rows,3),F.def,0);
+  if(live&&live.next_close!=null){
+    const urgent=live.dte!=null&&live.dte<=days;
+    ixg('ix4Now').innerHTML=
+      `<div style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg)">
+        <b>${ixDef(sym).label}</b> — near month <b>${live.expiry}</b> expires in <b>${live.dte==null?'—':live.dte}</b> trading day(s).
+        Near ${fmt(live.close)} · Next ${fmt(live.next_close)} ·
+        carry <span class="${live.roll>=0?'neg':'pos'}">${ixPM(live.roll)} pts (${ixPM(live.roll_pct)}%${live.roll_ann!=null?', '+ixPM(live.roll_ann)+'% ann.':''})</span>
+        → a long pays <b>${ixPM0(-live.roll*lot)}</b> per lot to carry forward, a short receives it.
+        ${urgent?'<span class="warn"> Roll window is open now.</span>':''}
+      </div>`;
+  }
+  ixg('ix4Summary').innerHTML=
+    ixBox('Expiries covered',T.length)+
+    ixBox('Avg carry (points)',ixPM(avg),avg>=0?'neg':'pos')+
+    ixBox('Avg carry (%)',ixPM(avgP)+'%',avgP>=0?'neg':'pos')+
+    ixBox('Avg annualised',avgA==null?'—':ixPM(avgA)+'%',avgA>=0?'neg':'pos')+
+    ixBox('Months a long paid',costly+' / '+T.length)+
+    ixBox('Months a long was paid',(T.length-costly)+' / '+T.length,'pos');
+  ixChart('ix4Chart',T.map(r=>r.expiry),[
+    {label:'Carry to next month (points)',data:T.map(r=>r.roll),borderColor:'#a371f7',
+     backgroundColor:'rgba(163,113,247,.15)',fill:true,borderWidth:2},
+    {label:'Annualised %',data:T.map(r=>r.roll_ann),borderColor:'#d29922',borderWidth:1.5,borderDash:[4,3],yAxisID:'y1'}],'points');
+  ixTable('ix4Tbl',['Expiry','Checked on','Days left','Spot','Near','Next','Carry (pts)','Carry %','Annualised %','Cost per lot (long)'],
+    T.map(r=>[r.expiry,r.date,r.dte,fmt(r.spot),fmt(r.close),fmt(r.next_close),
+      `<span class="${r.roll>=0?'neg':'pos'}">${ixPM(r.roll)}</span>`,
+      `<span class="${r.roll>=0?'neg':'pos'}">${ixPM(r.roll_pct)}%</span>`,
+      r.roll_ann==null?'—':`<span class="${r.roll_ann>=0?'neg':'pos'}">${ixPM(r.roll_ann)}%</span>`,
+      `<span class="${r.roll<=0?'pos':'neg'}">${ixPM0(-r.roll*(r.lot||lot))}</span>`]));
+  setS('ix4Status',`${T.length} expiries, checked ${days} trading day(s) before each one. `+
+    `On average a long paid ${fmt(avg)} points (${fmt(avgP)}%) to carry forward.`,'ok');
+}
+function ix4Download(kind){
+  if(!IX4RES)return setS('ix4Status','Show the table first.','warn');
+  const head=['Expiry','Checked on','Days left','Spot','Near','Next','Carry points','Carry %','Annualised %','Lot'];
+  const rows=IX4RES.T.map(r=>[r.expiry,r.date,r.dte,r.spot,r.close,r.next_close,
+    r.roll,r.roll_pct,r.roll_ann,r.lot]);
+  ixExport(kind,head,rows,'rollover_'+IX4RES.sym,'ix4Status');
+}
+
+/* ---- expiry reminder on the P&L home page ---- */
+async function ixRollAlert(){
+  const box=ixg('plRollAlert'); if(!box)return;
+  const out=[];
+  for(const f of IXFUT){
+    let F=null;
+    try{ F=await loadFut(f.sym); }catch(e){ continue; }
+    if(F.src!=='fut')continue;
+    const r=F.rows[F.rows.length-1];
+    if(!r||r.dte==null||r.dte>3||r.next_close==null)continue;
+    const lot=r.lot||f.lot;
+    out.push(`<b>${f.label}</b> expires in ${r.dte} trading day(s) — carrying forward
+      ${r.roll>=0?'costs':'earns'} <b>${fmt(Math.abs(r.roll))}</b> points
+      (${fmt(Math.abs(r.roll_pct))}%${r.roll_ann!=null?', '+fmt(Math.abs(r.roll_ann))+'% ann.':''}),
+      about ${'₹'+fmt0(Math.abs(r.roll*lot))} per lot.`);
+  }
+  box.innerHTML=out.length
+    ? `<div style="padding:10px 14px;border-radius:10px;border:1px solid var(--amber);background:rgba(210,153,34,.08);font-size:13px;line-height:1.7">
+         ⏳ ${out.join('<br>')}
+       </div>` : '';
+}
+
+(function ixInit(){
+  ['ix1Sym','ix2Sym','ix3Sym','ix4Sym'].forEach(id=>{
+    const s=ixg(id); if(!s||s.options.length)return;
+    IXFUT.forEach(f=>{const o=document.createElement('option');o.value=f.sym;o.textContent=f.label;s.appendChild(o);});
+  });
+  const to=new Date().toISOString().slice(0,10);
+  const from=new Date(); from.setFullYear(from.getFullYear()-5);
+  ['ix1From','ix2From','ix3From','ix4From'].forEach(i=>{const e=ixg(i);if(e)e.value=from.toISOString().slice(0,10);});
+  ['ix1To','ix2To','ix3To','ix4To'].forEach(i=>{const e=ixg(i);if(e)e.value=to;});
+  ['ix2','ix3'].forEach(P=>{
+    const s=ixg(P+'Sym'); if(!s)return;
+    s.addEventListener('change',()=>{const d=ixDef(s.value);const st=ixg(P+'Step');if(st)st.value=d.step;});
+  });
+})();
+
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(cls||'');}
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','t3Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
@@ -2854,9 +3667,11 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
   const mys=document.getElementById('mrYear');
   for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;mys.appendChild(o);}
   mys.value=cy; document.getElementById('mrMonth').value=String(to.getMonth()+1).padStart(2,'0');
-  const ays=document.getElementById('acYear');
-  for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
-  ays.value=2020;
+  ['acYear','taYear'].forEach(id=>{
+    const ays=document.getElementById(id); if(!ays)return;
+    for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
+    ays.value=2020;
+  });
 })();
 init();
 </script>
