@@ -101,18 +101,18 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">Raw Data ▾</button>
       <div class="nav-drop"><a data-pane="dl">Data Download</a><a data-pane="mm">Multi Month</a><a data-pane="mr">Monthly RSI</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="st">One Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
       <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
       <div class="nav-drop"><a class="soon">Coming soon</a></div></div>
     <div class="nav-item"><button class="nav-btn">Tools ▾</button>
-      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a><a data-pane="sr">Saved Runs</a></div></div>
+      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a><a data-pane="sr">Saved Runs</a><a onclick="pickLocal()">Use local data folder</a><a onclick="useMegaData()">Use MEGA data</a></div></div>
   </div>
 </div>
 
 <div class="hero">
-  <div class="hero-title" style="cursor:pointer" onclick="showPane('ac')" title="Home — All Change">Back-Testing Platform</div>
+  <div class="hero-title" style="cursor:pointer" onclick="showPane('pl')" title="Home - Daily P&L">Back-Testing Platform</div>
 </div>
 
 <!-- DATA DOWNLOAD (step 1) -->
@@ -186,6 +186,7 @@ a{color:var(--accent);}
       <div class="status" id="stHead" style="font-size:14px"></div>
       <div>
         <button id="stNextBtn" onclick="STRATS.st.advance()">Next month ▶</button>
+        <button class="ghost" id="stRunAllBtn" onclick="STRATS.st.runTillToday()">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.st.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('st')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.st.reset()">↺ New strategy</button>
@@ -239,6 +240,7 @@ a{color:var(--accent);}
       <div class="status" id="mcHead" style="font-size:14px"></div>
       <div>
         <button id="mcNextBtn" onclick="STRATS.mc.advance()">Next month ▶</button>
+        <button class="ghost" id="mcRunAllBtn" onclick="STRATS.mc.runTillToday()">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.mc.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('mc')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.mc.reset()">↺ New strategy</button>
@@ -269,7 +271,7 @@ a{color:var(--accent);}
 </div>
 
 <!-- ALL CHANGE (step 5) -->
-<div class="card" id="pane-ac">
+<div class="card hidden" id="pane-ac">
   <div class="section-head">All Change — automatic Top-N RSI portfolio, rebalanced monthly</div>
   <div id="acSetup">
     <div class="row">
@@ -358,6 +360,7 @@ a{color:var(--accent);}
       <div class="status" id="sxHead" style="font-size:14px"></div>
       <div>
         <button id="sxNextBtn" onclick="STRATS.sx.advance()">Next month ▶</button>
+        <button class="ghost" id="sxRunAllBtn" onclick="STRATS.sx.runTillToday()">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.sx.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('sx')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.sx.reset()">↺ New strategy</button>
@@ -443,6 +446,7 @@ a{color:var(--accent);}
   <div class="row">
     <button class="ghost" onclick="connectSaveFolder()">📂 Connect MEGA-synced folder</button>
     <button class="ghost" onclick="document.getElementById('srFile').click()">📄 Open a run file…</button>
+    <button class="ghost" onclick="pushAllRuns()">📂 Push all saved runs to folder</button>
     <input type="file" id="srFile" accept=".json" style="display:none" onchange="loadRunFile(this.files[0])">
   </div>
   <div class="status" id="srStatus">Saved runs live in this browser AND, once you connect a folder inside your MEGA-synced Data folder (e.g. Data\saved_runs), every 💾 Save also writes the Excel + run file there — MEGA uploads them automatically.</div>
@@ -472,6 +476,7 @@ a{color:var(--accent);}
       <div class="status" id="wkHead" style="font-size:14px"></div>
       <div>
         <button id="wkNextBtn" onclick="STRATS.wk.advance()">Next week ▶</button>
+        <button class="ghost" id="wkRunAllBtn" onclick="STRATS.wk.runTillToday()">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.wk.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('wk')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.wk.reset()">↺ New strategy</button>
@@ -520,6 +525,20 @@ a{color:var(--accent);}
   </div>
   <div class="status" id="mrStatus">Pick a month and RSI level — every share at or above it on that month's last trading day, with the total count.</div>
   <div class="tblwrap"><table id="mrTbl"></table></div>
+</div>
+
+<!-- DAILY P&L TRACKER -->
+<div class="card" id="pane-pl">
+  <div class="section-head">Daily P&L — every running strategy</div>
+  <div class="row">
+    <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
+    <button onclick="plRefresh()">Refresh</button>
+    <button class="ghost" onclick="plDownload()">Download Excel</button>
+  </div>
+  <div class="status" id="plStatus">Values your current holdings in each strategy at every day's close, so you can see how each one is doing day by day.</div>
+  <div class="row" id="plCards" style="margin-top:12px;gap:14px;align-items:stretch"></div>
+  <div class="chartbox" style="height:300px"><canvas id="plChart"></canvas></div>
+  <div class="tblwrap" style="max-height:460px;margin-top:12px"><table id="plTbl"></table></div>
 </div>
 
 <!-- CHART -->
@@ -654,9 +673,9 @@ async function fetchGz(relPath){
 }
 function parseCSV(text){
   const lines=text.split('\n').filter(l=>l.trim());
-  const head=lines[0].split(',');
+  const head=lines[0].split(',').map(h=>h.trim());
   return lines.slice(1).map(l=>{
-    const c=l.split(','); const o={};
+    const c=l.split(',').map(v=>v.trim()); const o={};
     head.forEach((h,i)=>o[h]=c[i]);
     ['open','high','low','close','vol','rsi14','mcap_cr','rsi_d','rsi_w','rsi_m','chg_d','chg_w','chg_m','o_d','o_w','o_m','stoch_k','stoch_d'].forEach(k=>{if(k in o)o[k]=o[k]===''?null:+o[k];});
     return o;
@@ -686,12 +705,23 @@ async function init(){
   }
 }
 async function pickLocal(){
+  if(!window.showDirectoryPicker){alert('Folder access needs Chrome or Edge on the https link.');return;}
   try{
     DIR=await window.showDirectoryPicker();
-    MODE='local'; CACHE.clear();
+    MODE='local'; CACHE.clear(); SCANDATES=null; PLDATA=null;
     MANIFEST=JSON.parse(await fetchGz('data/manifest.json.gz'));
     afterLoad();
-  }catch(e){ alert('Could not read that folder — pick the github_export folder. '+e.message); }
+    document.getElementById('liveText').textContent='Local Data';
+  }catch(e){ if(e&&e.name!=='AbortError')alert('Could not read that folder - pick the github_export folder. '+e.message); }
+}
+async function useMegaData(){
+  try{
+    MODE='mega'; DIR=null; CACHE.clear(); SCANDATES=null; PLDATA=null; MEGAMAP=null;
+    document.getElementById('liveText').textContent='connecting…';
+    await megaConnect();
+    MANIFEST=JSON.parse(await fetchGz('data/manifest.json.gz'));
+    afterLoad();
+  }catch(e){ alert('MEGA connection failed: '+(e&&e.message?e.message:e)); }
 }
 function afterLoad(){
   document.getElementById('liveDot').className='dot live';
@@ -705,6 +735,8 @@ function afterLoad(){
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
   try{STRATS.st.restore();STRATS.mc.restore();STRATS.ac.restore();STRATS.wk.restore();STRATS.sx.restore();}catch(e){}
   try{renderWatchlist();}catch(e){}
+  // home page is Daily P&L - load it straight away
+  try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
 }
 let NAMEMAP={};
 function showOffline(msg){
@@ -784,12 +816,13 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ss','sh','sr','chart','screener','analyse','export'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ss','sh','sr','pl','chart','screener','analyse','export'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
   document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open'));
   if(p==='sr')try{renderSavedRuns();}catch(e){}
+  if(p==='pl')try{plInit();}catch(e){}
   window.scrollTo({top:0});
 }
 document.querySelectorAll('#mainNav .nav-item').forEach(item=>{
@@ -1045,7 +1078,9 @@ function makeStrategy(P,fixedN,title,opts){
       const raw=localStorage.getItem('strat_'+P);
       if(!raw)return;
       const S=JSON.parse(raw);
-      if(!S||!S.holdings||!S.series||!S.series.length)return;
+      if(!S||!S.holdings||!S.holdings.length||!S.series||!S.series.length||!S.invested){
+        localStorage.removeItem('strat_'+P); return;
+      }
       inst.S=S;
       $('Setup').classList.add('hidden'); $('Run').classList.remove('hidden');
       $('SwapRow').classList.add('hidden'); $('NextBtn').disabled=false;
@@ -1221,10 +1256,26 @@ function makeStrategy(P,fixedN,title,opts){
     else {hs.col=col; hs.dir=col==='symbol'||col==='month'||col==='sector'?1:-1;}
     inst.render();
   };
+  inst.runTillToday=async function(){
+    if(!inst.S){return;}
+    const btn=document.getElementById(P+'RunAllBtn');
+    if(btn){btn.disabled=true;btn.textContent='running…';}
+    try{
+      for(let i=0;i<2000;i++){
+        const before=inst.S.month;
+        await inst.advance();
+        if(inst.S.month===before)break;      // no more data
+        inst.apply(true);                     // take the default swap(s)
+      }
+    }finally{
+      if(btn){btn.disabled=false;btn.textContent='⏩ Run till today';}
+      inst.render(`auto-run finished at ${inst.S.month} — press Next to continue manually.`);
+    }
+  };
   inst.stats=function(){
     const S=inst.S;
     const value=S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0);
-    const ret=(value-S.invested)/S.invested*100;
+    const ret=S.invested?((value-S.invested)/S.invested*100):0;
     let peak=-1,mdd=0;
     S.series.forEach(p=>{peak=Math.max(peak,p.value);mdd=Math.min(mdd,(p.value-peak)/peak*100);});
     const months=S.series.length-1;
@@ -1666,6 +1717,15 @@ async function acRun(){
     const top=rows.slice(0,topN);
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
     if(first){
+      if(!top.length){
+        const nRows=sc.rows.length;
+        const nRsi=sc.rows.filter(r=>r.rsi_m!=null).length;
+        const nMc=sc.rows.filter(r=>r.mcap_cr!=null).length;
+        const maxMc=sc.rows.reduce((a,r)=>Math.max(a,r.mcap_cr||0),0);
+        setS('acSetupStatus',
+          `Nothing qualified in ${mth} (file ${sc.date}): ${nRows} rows, ${nRsi} with monthly RSI, ${nMc} with market cap, biggest mcap Rs ${fmt0(maxMc)} cr vs your filter Rs ${fmt0(mcMin)} cr.`,'warn');
+        STRATS.ac.S=null; return;
+      }
       S.screenDate=sc.date; S.month=mth;
       top.forEach(r=>S.holdings.push({sym:r.symbol,units:amt/r.close,buyPrice:r.close,cost:amt,lastClose:r.close,rsi:r.rsi_m,buyMonth:mth}));
       S.invested=S.holdings.length*amt;
@@ -1705,7 +1765,10 @@ async function acRun(){
     }
     S.series.push({month:mth,value:S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0)});
   }
-  if(!S.series.length){setS('acSetupStatus','No usable months found.','warn');return;}
+  if(!S.series.length||!S.holdings.length||!S.invested){
+    setS('acSetupStatus','No shares matched your filters in that period - check the RSI/mcap levels, or wait for MEGA to finish syncing the data, then run again.','warn');
+    STRATS.ac.S=null; return;
+  }
   try{
     const nrows=await loadSeries('ix','NIFTY_50');
     S.nifty={}; nrows.forEach(r=>{S.nifty[r.date.slice(0,7)]=r.close;});
@@ -2192,10 +2255,31 @@ async function kvGet(k){const db=await idbKV();return new Promise((res,rej)=>{
   const rq=db.transaction('kv').objectStore('kv').get(k);
   rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});}
 async function connectSaveFolder(){
+  if(!window.showDirectoryPicker){
+    setS('srStatus','This browser can\'t write to folders. Use Chrome or Edge, and open the site over https (the github.io link) — not a local file.','warn');
+    return;
+  }
   try{
     const h=await window.showDirectoryPicker({mode:'readwrite'});
+    const perm=await h.requestPermission({mode:'readwrite'});
+    if(perm!=='granted'){setS('srStatus','Permission denied — pick the folder again and choose “Edit files”.','warn');return;}
     await kvSet('runDir',h);
-    setS('srStatus','Folder connected ✓ — every 💾 Save now also writes the Excel + run file there (and MEGA syncs it).','ok');
+    setS('srStatus',`Connected to “${h.name}” ✓ — new saves write there, and you can push existing runs with the buttons below.`,'ok');
+    renderSavedRuns();
+  }catch(e){
+    if(e&&e.name==='AbortError')return;
+    setS('srStatus','Could not connect: '+(e&&e.message?e.message:e),'warn');
+  }
+}
+async function folderStatus(){
+  const el=document.getElementById('srStatus'); if(!el)return;
+  try{
+    const h=await kvGet('runDir');
+    if(!h){setS('srStatus','Saved runs live in this browser. Connect a folder inside your MEGA-synced Data folder (e.g. “Saved Runs”) to also write the Excel + run file there.','');return;}
+    const p=await h.queryPermission({mode:'readwrite'});
+    setS('srStatus',p==='granted'
+      ?`Folder “${h.name}” connected ✓ — saves are written there and MEGA syncs them.`
+      :`Folder “${h.name}” remembered — press “Connect” once to re-allow writing (browsers ask again after a restart).`,p==='granted'?'ok':'warn');
   }catch(e){}
 }
 async function getRunDir(){
@@ -2208,8 +2292,10 @@ async function getRunDir(){
   return null;
 }
 async function folderSave(run){
-  const dir=await getRunDir();
+  let dir=null;
+  try{dir=await getRunDir();}catch(e){}
   if(!dir)return false;
+  try{
   const safe=run.name.replace(/[^\w\- ]+/g,'_').slice(0,60);
   // run file (reopenable via “Open a run file…”)
   let fh=await dir.getFileHandle(safe+'.json',{create:true});
@@ -2232,6 +2318,10 @@ async function folderSave(run){
     }catch(e){window.__wbSink=null;resolve();}
   });
   return true;
+  }catch(e){
+    setS('srStatus','Write failed: '+(e&&e.message?e.message:e),'warn');
+    return false;
+  }
 }
 function loadRunFile(file){
   if(!file)return;
@@ -2287,7 +2377,9 @@ function renderSavedRuns(){
       `<td>${r.saved}</td><td style="white-space:nowrap">`+
       `<button class="ghost mini" onclick="openRun(${r.id})">▶ Open</button> `+
       `<button class="ghost mini" onclick="runExcel(${r.id})">⬇ Excel</button> `+
+      `<button class="ghost mini" onclick="pushRun(${r.id})">📂 To MEGA</button> `+
       `<button class="ghost mini" onclick="delRun(${r.id})">✕</button></td></tr>`).join('');
+  folderStatus();
 }
 function findRun(id){return getRuns().find(r=>r.id===id);}
 function openRun(id){
@@ -2337,6 +2429,23 @@ function runExcel(id){
     const prev=SHRES; SHRES=r.payload.res;
     try{shDownload('xlsx');}finally{SHRES=prev;}
   }
+}
+async function pushRun(id){
+  const r=findRun(id); if(!r)return;
+  const dir=await getRunDir();
+  if(!dir){setS('srStatus','Connect the folder first (button above).','warn');return;}
+  setS('srStatus','writing '+r.name+'…','');
+  const ok=await folderSave(r);
+  setS('srStatus',ok?`“${r.name}” written to the folder ✓ — MEGA will sync it shortly.`:'Write failed.',ok?'ok':'warn');
+}
+async function pushAllRuns(){
+  const runs=getRuns();
+  if(!runs.length){setS('srStatus','No saved runs yet.','warn');return;}
+  const dir=await getRunDir();
+  if(!dir){setS('srStatus','Connect the folder first (button above).','warn');return;}
+  let n=0;
+  for(const r of runs){setS('srStatus',`writing ${++n}/${runs.length}…`,''); await folderSave(r);}
+  setS('srStatus',`${runs.length} run(s) written to the folder ✓ — MEGA will sync them shortly.`,'ok');
 }
 function delRun(id){
   if(!confirm('Delete this saved run?'))return;
@@ -2394,6 +2503,140 @@ function mrDownload(kind){
     }
     setS('mrStatus',`Exported ${MRROWS.length} shares.`,'ok');
   }catch(e){setS('mrStatus','Download failed: '+e.message,'warn');}
+}
+
+/* ============ daily P&L tracker ============ */
+const PLDEFS=[['ac','All Change','#3fb950'],['st','One Change','#2f81f7'],
+              ['mc','Multi Change','#a371f7'],['wk','Weekly Change','#d29922']];
+let PLDATA=null, plChartObj=null;
+function plInit(){ if(!PLDATA)plRefresh(); }
+async function plRefresh(){
+  if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
+  const live=PLDEFS.filter(([p])=>STRATS[p]&&STRATS[p].S&&STRATS[p].S.holdings&&STRATS[p].S.holdings.length);
+  if(!live.length){setS('plStatus','No strategies running yet — start one (or open a saved run) and it will appear here.','warn');return;}
+  const N=Math.max(5,Math.min(+document.getElementById('plDays').value||30,120));
+  const all=await getScanDates();
+  if(!all||!all.length){setS('plStatus','Scan index unavailable.','warn');return;}
+  const dates=all.slice(-(N+1));
+  const maps=[];
+  for(let i=0;i<dates.length;i++){
+    setS('plStatus',`loading ${i+1}/${dates.length} days…`,'');
+    try{
+      const rows=parseCSV(await fetchGz(`data/scan/${dates[i]}.csv.gz`));
+      maps.push({date:dates[i],px:new Map(rows.map(r=>[r.symbol,r.close]))});
+    }catch(e){}
+  }
+  if(maps.length<2){setS('plStatus','Not enough daily data.','warn');return;}
+  // nifty for comparison
+  let nifty=null;
+  try{
+    const nr=await loadSeries('ix','NIFTY_50');
+    const m=new Map(nr.map(r=>[r.date,r.close]));
+    nifty=maps.map(d=>m.get(d.date)??null);
+  }catch(e){}
+  const series=live.map(([p,label,color])=>{
+    const S=STRATS[p].S;
+    const vals=maps.map(d=>{
+      let v=0,ok=true;
+      S.holdings.forEach(h=>{const px=d.px.get(h.sym); if(px==null){ok=false;} else v+=h.units*px;});
+      return ok?v:null;
+    });
+    // last rebalance = latest buy month among holdings
+    const lastBuy=S.holdings.reduce((a,h)=>String(h.buyMonth)>a?String(h.buyMonth):a,'');
+    return {p,label,color,vals,invested:S.invested,lastBuy,holdings:S.holdings.length};
+  });
+  PLDATA={dates:maps.map(d=>d.date),series,nifty};
+  plRender();
+}
+function plRender(){
+  const {dates,series,nifty}=PLDATA;
+  const d0=dates.length-1;
+  // month-to-date base = last close of the previous month
+  const curMonth=dates[d0].slice(0,7);
+  let baseIdx=-1;
+  for(let i=d0;i>=0;i--){ if(dates[i].slice(0,7)!==curMonth){baseIdx=i;break;} }
+  const mtdExact=baseIdx>=0; if(baseIdx<0)baseIdx=0;
+  // cards
+  document.getElementById('plCards').innerHTML=series.map(s=>{
+    const v=s.vals[d0], prev=s.vals[d0-1];
+    const day=(v!=null&&prev!=null)?v-prev:null;
+    const dayPct=(day!=null&&prev)?day/prev*100:null;
+    const base=s.vals[baseIdx];
+    const mtd=(v!=null&&base!=null)?v-base:null;
+    const mtdPct=(mtd!=null&&base)?mtd/base*100:null;
+    const tot=(v!=null&&s.invested)?(v-s.invested)/s.invested*100:null;
+    return `<div class="subcard" style="flex:1;min-width:190px;margin-top:0">
+      <div style="font-weight:700;color:${s.color}">${s.label}</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">${s.holdings} holdings · last change ${s.lastBuy||'—'}</div>
+      <div style="font-size:12px;color:var(--muted)">${dates[d0]}</div>
+      <div style="font-size:18px;font-weight:700" class="${day==null?'':(day>=0?'pos':'neg')}">
+        ${day==null?'—':(day>=0?'+':'')+'₹'+fmt0(Math.abs(day)*(day<0?-1:1))}
+        ${dayPct==null?'':`<span style="font-size:12px"> (${dayPct>=0?'+':''}${fmt(dayPct)}%)</span>`}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">This month${mtdExact?'':' (part)'}</div>
+      <div style="font-size:16px;font-weight:700" class="${mtd==null?'':(mtd>=0?'pos':'neg')}">
+        ${mtd==null?'—':(mtd>=0?'+':'')+'₹'+fmt0(Math.abs(mtd)*(mtd<0?-1:1))}
+        ${mtdPct==null?'':`<span style="font-size:12px"> (${mtdPct>=0?'+':''}${fmt(mtdPct)}%)</span>`}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Value ₹${v==null?'—':fmt0(v)}
+        ${tot==null?'':` · <span class="${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${fmt(tot)}%</span> total`}</div>
+    </div>`;
+  }).join('');
+  // chart: daily % per strategy
+  const labels=dates.slice(1);
+  const dsets=series.map(s=>({label:s.label,
+    data:labels.map((_,i)=>{const a=s.vals[i],b=s.vals[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
+    borderColor:s.color,backgroundColor:s.color,borderWidth:1.8,pointRadius:0,tension:.15,spanGaps:true}));
+  if(nifty)dsets.push({label:'NIFTY 50',data:labels.map((_,i)=>{const a=nifty[i],b=nifty[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
+    borderColor:'#8b949e',borderWidth:1.2,borderDash:[5,3],pointRadius:0,tension:.15,spanGaps:true});
+  if(plChartObj)plChartObj.destroy();
+  plChartObj=new Chart(document.getElementById('plChart'),{type:'line',data:{labels,datasets:dsets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#e6edf3'}},title:{display:true,text:'Daily % move',color:'#8b949e'}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'#21262d'}},
+              y:{ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}}}});
+  // table newest first
+  const t=document.getElementById('plTbl');
+  t.innerHTML='<tr><th style="text-align:left">Date</th>'+
+    series.map(s=>`<th>${s.label}</th>`).join('')+'<th>NIFTY 50</th></tr>'+
+    labels.map((d,i)=>i).reverse().map(i=>{
+      const cells=series.map(s=>{
+        const a=s.vals[i],b=s.vals[i+1];
+        if(a==null||b==null)return '<td>—</td>';
+        const rs=b-a, pct=(b/a-1)*100;
+        return `<td class="${rs>=0?'pos':'neg'}">${rs>=0?'+':''}₹${fmt0(Math.abs(rs))}<br><span style="font-size:11px">${pct>=0?'+':''}${fmt(pct)}%</span></td>`;
+      }).join('');
+      let nc='<td>—</td>';
+      if(nifty&&nifty[i]&&nifty[i+1]){const np=(nifty[i+1]/nifty[i]-1)*100;
+        nc=`<td class="${np>=0?'pos':'neg'}">${np>=0?'+':''}${fmt(np)}%</td>`;}
+      return `<tr><td style="text-align:left">${labels[i]}</td>${cells}${nc}</tr>`;
+    }).join('');
+  const now=new Date().toISOString().slice(0,10);
+  const stale=dates[d0]<now;
+  setS('plStatus',`Data as of ${dates[d0]}${stale?` (today's file arrives after 6:30 PM)`:''} · this month measured from ${dates[baseIdx]} close · last ${labels.length} trading days · valued on current holdings.`,'ok');
+}
+function plDownload(){
+  try{
+    if(!PLDATA){setS('plStatus','Press Refresh first.','warn');return;}
+    const {dates,series,nifty}=PLDATA;
+    const labels=dates.slice(1);
+    const header=['Date'].concat(series.flatMap(s=>[s.label+' ₹',s.label+' %'])).concat(['NIFTY 50 %']);
+    const rows=labels.map((d,i)=>{
+      const r=[d];
+      series.forEach(s=>{
+        const a=s.vals[i],b=s.vals[i+1];
+        r.push(a==null||b==null?'':Math.round(b-a));
+        r.push(a==null||b==null?'':+((b/a-1)*100).toFixed(2));
+      });
+      r.push(nifty&&nifty[i]&&nifty[i+1]?+((nifty[i+1]/nifty[i]-1)*100).toFixed(2):'');
+      return r;
+    }).reverse();
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([header].concat(rows));
+    ws['!cols']=header.map(()=>({wch:14}));
+    XLSX.utils.book_append_sheet(wb,ws,'Daily P&L');
+    const fn=`daily_pnl_${dates[dates.length-1]}.xlsx`;
+    if(window.__wbSink)window.__wbSink(wb,fn); else XLSX.writeFile(wb,fn);
+    setS('plStatus','Exported.','ok');
+  }catch(e){setS('plStatus','Download failed: '+e.message,'warn');}
 }
 
 /* ============ watchlist ============ */
