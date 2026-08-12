@@ -651,9 +651,9 @@ a{color:var(--accent);}
 
 <!-- RAW DATA: MONTHLY RSI -->
 <div class="card hidden" id="pane-mr">
-  <div class="section-head">Monthly RSI — shares above a level, month by month</div>
+  <div class="section-head">Monthly RSI — how many shares cross a level, month by month</div>
   <div class="row">
-    <div><label>Month</label>
+    <div><label>From month</label>
       <select id="mrMonth">
         <option value="01">January</option><option value="02">February</option><option value="03">March</option>
         <option value="04">April</option><option value="05">May</option><option value="06">June</option>
@@ -661,16 +661,27 @@ a{color:var(--accent);}
         <option value="10">October</option><option value="11">November</option><option value="12">December</option>
       </select></div>
     <div><label>Year</label><select id="mrYear"></select></div>
-    <div><label>RSI (monthly) min</label><input type="number" id="mrRsi" style="width:100px" value="80"></div>
+    <div><label>To month</label>
+      <select id="mrMonth2">
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select></div>
+    <div><label>Year</label><select id="mrYear2"></select></div>
+    <div><label>RSI (monthly)</label>
+      <select id="mrDir"><option value="above" selected>at or above</option><option value="below">at or below</option></select></div>
+    <div><label>Level</label><input type="number" id="mrRsi" style="width:90px" value="80"></div>
     <div><label>Min Mcap (₹ cr)</label><input type="number" id="mrMc" style="width:110px" placeholder="optional"></div>
-    <button onclick="mrRun(0)">Show shares</button>
-    <button class="ghost" onclick="mrRun(-1)">◀ Prev month</button>
-    <button class="ghost" onclick="mrRun(1)">Next month ▶</button>
+    <button onclick="mrRun()">Run</button>
     <button class="ghost" onclick="mrDownload('xlsx')">Download Excel</button>
     <button class="ghost" onclick="mrDownload('csv')">Download CSV</button>
   </div>
-  <div class="status" id="mrStatus">Pick a month and RSI level — every share at or above it on that month's last trading day, with the total count.</div>
-  <div class="tblwrap"><table id="mrTbl"></table></div>
+  <div class="status" id="mrStatus">Pick a range — for every month end in between you get the count of shares on the chosen side of the RSI level. Click any month to see which shares they were.</div>
+  <div class="row" id="mrSummary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:260px"><canvas id="mrChart"></canvas></div>
+  <div class="tblwrap" style="max-height:420px;margin-top:12px"><table id="mrTbl"></table></div>
+  <div id="mrDetail"></div>
 </div>
 
 <!-- DAILY P&L TRACKER -->
@@ -2870,54 +2881,122 @@ function delRun(id){
 }
 
 /* ============ raw data: monthly RSI ============ */
-let MRROWS=[], MRDATE=null;
-async function mrRun(step){
+let MRRES=null, mrChartObj=null, MRCACHE=new Map();
+const MRNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+async function mrScan(mth){
+  if(MRCACHE.has(mth))return MRCACHE.get(mth);
+  let sc=null;
+  try{ sc=await loadScanByMonth(mth); }catch(e){ sc=null; }
+  MRCACHE.set(mth,sc); return sc;
+}
+async function mrRun(){
   if(!MANIFEST){setS('mrStatus','Not connected to data yet.','warn');return;}
-  const ms=document.getElementById('mrMonth'), ys=document.getElementById('mrYear');
-  if(step){
-    let y=+ys.value, m=+ms.value+step;
-    if(m>12){m=1;y++;} if(m<1){m=12;y--;}
-    if(!ys.querySelector(`option[value="${y}"]`)){setS('mrStatus','No data for that year.','warn');return;}
-    ys.value=y; ms.value=String(m).padStart(2,'0');
+  const g=id=>document.getElementById(id);
+  const from=g('mrYear').value+'-'+g('mrMonth').value;
+  const to  =g('mrYear2').value+'-'+g('mrMonth2').value;
+  if(from>to){setS('mrStatus','The From month is after the To month.','warn');return;}
+  const lvl=+g('mrRsi').value||0, above=g('mrDir').value==='above';
+  const mv=g('mrMc').value, mmin=mv===''?null:+mv;
+  // every month in the range
+  const months=[]; let [y,m]=from.split('-').map(Number);
+  const [ey,em]=to.split('-').map(Number);
+  while(y<ey||(y===ey&&m<=em)){ months.push(`${y}-${String(m).padStart(2,'0')}`); m++; if(m>12){m=1;y++;} }
+  const out=[];
+  for(let i=0;i<months.length;i++){
+    setS('mrStatus',`loading ${months[i]} — ${i+1} of ${months.length}…`,'');
+    const sc=await mrScan(months[i]);
+    if(!sc)continue;
+    const universe=sc.rows.filter(r=>r.rsi_m!=null&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)));
+    const hit=universe.filter(r=>above?r.rsi_m>=lvl:r.rsi_m<=lvl).sort((a,b)=>above?b.rsi_m-a.rsi_m:a.rsi_m-b.rsi_m);
+    out.push({month:months[i],date:sc.date,n:hit.length,universe:universe.length,rows:hit});
   }
-  const mth=ys.value+'-'+ms.value;
-  const rmin=+document.getElementById('mrRsi').value||0;
-  const mv=document.getElementById('mrMc').value, mmin=mv===''?null:+mv;
-  setS('mrStatus','loading '+mth+'…','');
-  const sc=await loadScanByMonth(mth);
-  if(!sc){setS('mrStatus','No trading data for '+mth+'.','warn');document.getElementById('mrTbl').innerHTML='';return;}
-  MRDATE=sc.date;
-  MRROWS=sc.rows.filter(r=>r.rsi_m!=null&&r.rsi_m>=rmin&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)))
-    .sort((a,b)=>b.rsi_m-a.rsi_m);
-  const t=document.getElementById('mrTbl');
-  t.innerHTML='<tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI (monthly)</th><th>Close</th><th>%Chg (month)</th><th>Mcap ₹ cr</th></tr>'+
-    MRROWS.slice(0,800).map((r,i)=>{
-      const nm=NAMEMAP[r.symbol]||'', ch=r.chg_m;
-      return `<tr><td>${i+1}</td><td style="text-align:left"><b>${r.symbol}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
-        `<td>${fmt(r.rsi_m)}</td><td>${fmt(r.close)}</td>`+
-        `<td class="${ch==null?'':(ch>=0?'pos':'neg')}">${ch==null?'-':(ch>=0?'+':'')+fmt(ch)+'%'}</td>`+
-        `<td>${r.mcap_cr==null?'-':fmt0(r.mcap_cr)}</td></tr>`;
-    }).join('')+
-    (MRROWS.length>800?`<tr><td colspan="6" style="text-align:center;color:var(--muted)">showing first 800 of ${MRROWS.length}</td></tr>`:'');
-  setS('mrStatus',`${mth} (as on ${sc.date}) — ${MRROWS.length.toLocaleString()} shares with monthly RSI ≥ ${rmin}${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}.`,MRROWS.length?'ok':'warn');
+  if(!out.length){setS('mrStatus','No trading data in that range.','warn');
+    g('mrTbl').innerHTML='';g('mrSummary').innerHTML='';g('mrDetail').innerHTML='';return;}
+  MRRES={out,lvl,above,mmin,from,to};
+  mrRender();
+}
+function mrRender(){
+  const {out,lvl,above,mmin}=MRRES;
+  const counts=out.map(o=>o.n);
+  const tot=counts.reduce((a,b)=>a+b,0), avg=tot/out.length;
+  const peak=out.reduce((a,b)=>b.n>a.n?b:a), low=out.reduce((a,b)=>b.n<a.n?b:a);
+  const zero=out.filter(o=>o.n===0).length;
+  const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+  document.getElementById('mrSummary').innerHTML=
+    box('Months',out.length)+
+    box('Average per month',fmt(avg,1))+
+    box('Busiest',`${peak.month} (${peak.n})`,'pos')+
+    box('Quietest',`${low.month} (${low.n})`,'neg')+
+    box('Months with none',zero)+
+    box('Total readings',fmt0(tot));
+  // chart
+  if(mrChartObj){try{mrChartObj.destroy();}catch(e){}mrChartObj=null;}
+  mrChartObj=new Chart(document.getElementById('mrChart'),{type:'bar',
+    data:{labels:out.map(o=>o.month),datasets:[{label:`Shares ${above?'≥':'≤'} RSI ${lvl}`,data:counts,
+      backgroundColor:out.map(o=>o.n===0?'#6e7681':(above?'#22d3ee':'#fbbf24')),borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onClick:(e,el)=>{if(el&&el.length)mrShow(el[0].index);},
+      plugins:{legend:{labels:{color:'#c9d1d9'}}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:14},grid:{display:false}},
+              y:{beginAtZero:true,ticks:{color:'#8b949e',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}});
+  // month table
+  document.getElementById('mrTbl').innerHTML=
+    '<thead><tr><th style="text-align:left">Month</th><th>Month end</th><th>Shares '+(above?'≥':'≤')+' '+lvl+
+    '</th><th>Screened</th><th>% of universe</th><th></th></tr></thead><tbody>'+
+    out.map((o,i)=>`<tr style="cursor:pointer" onclick="mrShow(${i})">
+      <td style="text-align:left"><b>${MRNAMES[+o.month.slice(5)-1]} ${o.month.slice(0,4)}</b></td>
+      <td>${o.date}</td>
+      <td style="font-weight:700" class="${o.n?'pos':''}">${o.n}</td>
+      <td>${fmt0(o.universe)}</td>
+      <td>${o.universe?fmt(o.n/o.universe*100):'—'}%</td>
+      <td style="color:var(--muted)">view ▸</td></tr>`).join('')+'</tbody>';
+  setS('mrStatus',`${out.length} months from ${MRRES.from} to ${MRRES.to} — monthly RSI ${above?'at or above':'at or below'} ${lvl}`+
+    (mmin!=null?`, mcap ≥ ₹${fmt0(mmin)} cr`:'')+`. Average ${fmt(avg,1)} shares a month.`,'ok');
+  mrShow(out.length-1);
+}
+function mrShow(i){
+  const o=MRRES&&MRRES.out[i]; if(!o)return;
+  const d=document.getElementById('mrDetail');
+  if(!o.rows.length){
+    d.innerHTML=`<div class="subcard"><div class="section-head">${o.month} — nothing qualified</div></div>`;return;}
+  d.innerHTML=`<div class="subcard">
+    <div class="section-head">${MRNAMES[+o.month.slice(5)-1]} ${o.month.slice(0,4)} — ${o.n} share(s) as on ${o.date}</div>
+    <div class="tblwrap" style="max-height:400px"><table>
+      <thead><tr><th>#</th><th style="text-align:left">Symbol</th><th>RSI (monthly)</th><th>Close</th><th>%Chg (month)</th><th>Mcap ₹ cr</th></tr></thead>
+      <tbody>${o.rows.slice(0,600).map((r,j)=>{
+        const nm=NAMEMAP[r.symbol]||'', ch=r.chg_m;
+        return `<tr><td>${j+1}</td><td style="text-align:left"><b>${r.symbol}</b>${nm?`<br><span style="color:var(--muted);font-size:11px">${nm}</span>`:''}</td>`+
+          `<td>${fmt(r.rsi_m)}</td><td>${fmt(r.close)}</td>`+
+          `<td class="${ch==null?'':(ch>=0?'pos':'neg')}">${ch==null?'-':(ch>=0?'+':'')+fmt(ch)+'%'}</td>`+
+          `<td>${r.mcap_cr==null?'-':fmt0(r.mcap_cr)}</td></tr>`;}).join('')}
+        ${o.rows.length>600?`<tr><td colspan="6" style="text-align:center;color:var(--muted)">showing first 600 of ${o.rows.length}</td></tr>`:''}
+      </tbody></table></div></div>`;
 }
 function mrDownload(kind){
   try{
-    if(!MRROWS.length){setS('mrStatus','Show a month first.','warn');return;}
-    const header=['#','Symbol','Company Name','RSI (monthly)','Close','%Chg (month)','Mcap ₹ cr'];
-    const rows=MRROWS.map((r,i)=>[i+1,r.symbol,NAMEMAP[r.symbol]||'',r.rsi_m??'',r.close??'',r.chg_m??'',r.mcap_cr??'']);
-    const stamp=MRDATE||'';
+    if(!MRRES){setS('mrStatus','Run it first.','warn');return;}
+    const {out,lvl,above}=MRRES;
+    const sHead=['Month','Month end',`Shares ${above?'>=':'<='} RSI ${lvl}`,'Screened','% of universe'];
+    const sRows=out.map(o=>[o.month,o.date,o.n,o.universe,o.universe?+(o.n/o.universe*100).toFixed(2):'']);
+    const dHead=['Month','Month end','Symbol','Company Name','RSI (monthly)','Close','%Chg (month)','Mcap Rs cr'];
+    const dRows=[];
+    out.forEach(o=>o.rows.forEach(r=>dRows.push([o.month,o.date,r.symbol,NAMEMAP[r.symbol]||'',
+      r.rsi_m??'',r.close??'',r.chg_m??'',r.mcap_cr??''])));
+    const name=`monthly_rsi_${MRRES.from}_to_${MRRES.to}`;
     if(kind==='xlsx'){
       const wb=XLSX.utils.book_new();
-      const ws=XLSX.utils.aoa_to_sheet([[`Monthly RSI screen — as on ${stamp} · ${MRROWS.length} shares`],header].concat(rows));
-      ws['!cols']=[{wch:5},{wch:14},{wch:32},{wch:13},{wch:11},{wch:13},{wch:12}];
-      XLSX.utils.book_append_sheet(wb,ws,'Monthly RSI');
-      if(window.__wbSink)window.__wbSink(wb,`monthly_rsi_${stamp}.xlsx`); else XLSX.writeFile(wb,`monthly_rsi_${stamp}.xlsx`);
+      const w1=XLSX.utils.aoa_to_sheet([sHead].concat(sRows));
+      w1['!cols']=[{wch:10},{wch:12},{wch:20},{wch:11},{wch:14}];
+      XLSX.utils.book_append_sheet(wb,w1,'Count by month');
+      const w2=XLSX.utils.aoa_to_sheet([dHead].concat(dRows));
+      w2['!cols']=[{wch:10},{wch:12},{wch:14},{wch:32},{wch:13},{wch:11},{wch:13},{wch:12}];
+      XLSX.utils.book_append_sheet(wb,w2,'Shares');
+      if(window.__wbSink)window.__wbSink(wb,name+'.xlsx'); else XLSX.writeFile(wb,name+'.xlsx');
     } else {
-      const esc=v=>{v=String(v);return v.includes(',')?'"'+v+'"':v;};
-      dl(new Blob([[header.join(',')].concat(rows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),`monthly_rsi_${stamp}.csv`);
+      const esc=v=>{v=String(v==null?'':v);return v.includes(',')?'"'+v+'"':v;};
+      dl(new Blob([[sHead.join(',')].concat(sRows.map(r=>r.map(esc).join(','))).join('\n')],{type:'text/csv'}),name+'.csv');
     }
-    setS('mrStatus',`Exported ${MRROWS.length} shares.`,'ok');
+    setS('mrStatus',`Exported ${out.length} months and ${dRows.length} share readings.`,'ok');
   }catch(e){setS('mrStatus','Download failed: '+e.message,'warn');}
 }
 
@@ -3873,9 +3952,14 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
     ys.value=cy;
   }
   document.getElementById('mmMonth2').value=String(to.getMonth()+1).padStart(2,'0');
-  const mys=document.getElementById('mrYear');
-  for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;mys.appendChild(o);}
-  mys.value=cy; document.getElementById('mrMonth').value=String(to.getMonth()+1).padStart(2,'0');
+  for(const id of ['mrYear','mrYear2']){
+    const mys=document.getElementById(id);
+    for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;mys.appendChild(o);}
+    mys.value=cy;
+  }
+  document.getElementById('mrYear').value=cy-1;
+  document.getElementById('mrMonth').value='01';
+  document.getElementById('mrMonth2').value=String(to.getMonth()+1).padStart(2,'0');
   ['acYear','taYear'].forEach(id=>{
     const ays=document.getElementById(id); if(!ays)return;
     for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
