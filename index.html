@@ -679,13 +679,24 @@ a{color:var(--accent);}
   <div class="row">
     <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
     <button onclick="plRefresh()">Refresh</button>
+    <button class="ghost" onclick="plSyncPrices()">🔄 Sync prices to latest close</button>
     <button class="ghost" onclick="plDownload()">Download Excel</button>
   </div>
   <div class="status" id="plStatus">Values your current holdings in each strategy at every day's close, so you can see how each one is doing day by day.</div>
   <div id="plRollAlert" style="margin-top:10px"></div>
+  <div id="plCheck" style="margin-top:10px"></div>
   <div class="row" id="plCards" style="margin-top:12px;gap:14px;align-items:stretch"></div>
   <div class="chartbox" style="height:300px"><canvas id="plChart"></canvas></div>
   <div class="tblwrap" style="max-height:460px;margin-top:12px"><table id="plTbl"></table></div>
+  <div class="subcard">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <div class="section-head" style="margin:0">Holdings — share by share</div>
+      <button class="ghost mini" onclick="plHoldDownload()">⬇ Download all portfolios</button>
+    </div>
+    <div class="row" id="plHoldTabs" style="margin:8px 0 4px"></div>
+    <div class="status" id="plHoldNote" style="margin:0 0 6px"></div>
+    <div class="tblwrap" style="max-height:560px"><table id="plHoldTbl"></table></div>
+  </div>
 </div>
 
 <!-- TRACKED (P&L) STRATEGIES -->
@@ -2891,7 +2902,8 @@ function mrDownload(kind){
 /* ============ daily P&L tracker ============ */
 // distinct, bright, and deliberately NOT green — the ₹ figures are already green/red
 const PLDEFS=[['ta','All Change','#22d3ee'],['t3','Multi Change','#c084fc'],['tw','Weekly Change','#fbbf24']];
-let PLDATA=null, plChartObj=null;
+let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null,
+    PLHOLDSEL=null, PLHOLDSORT={key:'value',dir:-1};
 function plInit(){ if(!PLDATA)plRefresh(); }
 async function plRefresh(){
   if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
@@ -2907,6 +2919,8 @@ async function plRefresh(){
     try{
       const rows=parseCSV(await fetchGz(`data/scan/${dates[i]}.csv.gz`));
       maps.push({date:dates[i],px:new Map(rows.map(r=>[r.symbol,r.close]))});
+      if(i===dates.length-1)PLLAST={date:dates[i],px:maps[maps.length-1].px,
+        rsi:new Map(rows.map(r=>[r.symbol,r.rsi_m]))};
     }catch(e){}
   }
   if(maps.length<2){setS('plStatus','Not enough daily data.','warn');return;}
@@ -2928,8 +2942,178 @@ async function plRefresh(){
     const lastBuy=S.holdings.reduce((a,h)=>String(h.buyMonth)>a?String(h.buyMonth):a,'');
     return {p,label,color,vals,invested:S.invested,lastBuy,holdings:S.holdings.length};
   });
+  PLMAPS=maps;
   PLDATA={dates:maps.map(d=>d.date),series,nifty};
+  if(!PLHOLDSEL||!series.some(s=>s.p===PLHOLDSEL))PLHOLDSEL=series[0].p;
   plRender();
+}
+/* ---- per-share breakdown, so every card can be checked line by line ---- */
+function plHoldRows(p){
+  const S=STRATS[p]&&STRATS[p].S;
+  if(!S||!S.holdings||!S.holdings.length||!PLMAPS||PLMAPS.length<2)return null;
+  const now=PLMAPS[PLMAPS.length-1], prev=PLMAPS[PLMAPS.length-2];
+  const rows=S.holdings.map(h=>{
+    const px=now.px.get(h.sym), pp=prev.px.get(h.sym);
+    const value=px!=null?h.units*px:null;
+    return {sym:h.sym,name:NAMEMAP[h.sym]||'',units:h.units,buy:h.buyPrice,
+      month:h.buyMonth,sector:h.sector||'',prev:pp,close:px,rsi:h.rsi,
+      day:(px!=null&&pp!=null)?h.units*(px-pp):null,
+      daypct:(px!=null&&pp)?(px/pp-1)*100:null,
+      value,total:(px!=null&&h.buyPrice)?(px-h.buyPrice)/h.buyPrice*100:null};
+  });
+  const tot=rows.reduce((s,r)=>s+(r.value||0),0);
+  rows.forEach(r=>r.weight=(r.value!=null&&tot)?r.value/tot*100:null);
+  return {rows,tot,date:now.date,prevDate:prev.date};
+}
+function plHoldSort(k){
+  PLHOLDSORT = (PLHOLDSORT.key===k) ? {key:k,dir:-PLHOLDSORT.dir}
+                                    : {key:k,dir:(k==='sym'||k==='month')?1:-1};
+  plHoldRender();
+}
+function plHoldPick(p){ PLHOLDSEL=p; plHoldRender(); }
+function plHoldRender(){
+  const tabs=document.getElementById('plHoldTabs'), tbl=document.getElementById('plHoldTbl');
+  if(!tabs||!tbl||!PLDATA)return;
+  tabs.innerHTML=PLDATA.series.map(s=>
+    `<button class="ghost mini" onclick="plHoldPick('${s.p}')" style="border-color:${s.color};${
+      s.p===PLHOLDSEL?`background:${s.color}22;color:${s.color};font-weight:700`:''}">${s.label}</button>`).join('');
+  const D=plHoldRows(PLHOLDSEL);
+  if(!D){tbl.innerHTML='';setS('plHoldNote','Nothing held in this strategy yet.','warn');return;}
+  const k=PLHOLDSORT.key, dir=PLHOLDSORT.dir;
+  const rows=[...D.rows].sort((a,b)=>{
+    const x=a[k],y=b[k];
+    if(typeof x==='string'||typeof y==='string')return dir*String(x||'').localeCompare(String(y||''));
+    return dir*(((x==null)?-1e18:x)-((y==null)?-1e18:y));
+  });
+  const cols=[['sym','Symbol'],['name','Company'],['month','In since'],['units','Units'],
+    ['buy','Buy'],['prev','Prev close'],['close','Close'],['daypct','Day %'],['day','Day ₹'],
+    ['value','Value ₹'],['weight','Weight %'],['total','Since buy %'],['rsi','RSI (M)']];
+  const arrow=c=>c===k?(dir>0?' ▲':' ▼'):'';
+  const dayTot=rows.reduce((s,r)=>s+(r.day||0),0);
+  tbl.innerHTML='<thead><tr>'+cols.map(([c,l])=>
+      `<th style="cursor:pointer" onclick="plHoldSort('${c}')">${l}${arrow(c)}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map(r=>`<tr>
+      <td><b>${r.sym}</b></td>
+      <td style="text-align:left">${r.name}</td>
+      <td>${r.month||''}</td>
+      <td>${fmt(r.units,2)}</td>
+      <td>${fmt(r.buy)}</td>
+      <td>${r.prev==null?'—':fmt(r.prev)}</td>
+      <td>${r.close==null?'<span class="warn">no price</span>':fmt(r.close)}</td>
+      <td class="${r.daypct==null?'':(r.daypct>=0?'pos':'neg')}">${r.daypct==null?'—':(r.daypct>=0?'+':'')+fmt(r.daypct)+'%'}</td>
+      <td class="${r.day==null?'':(r.day>=0?'pos':'neg')}">${r.day==null?'—':(r.day>=0?'+₹':'−₹')+fmt0(Math.abs(r.day))}</td>
+      <td>${r.value==null?'—':'₹'+fmt0(r.value)}</td>
+      <td>${r.weight==null?'—':fmt(r.weight)+'%'}</td>
+      <td class="${r.total==null?'':(r.total>=0?'pos':'neg')}">${r.total==null?'—':(r.total>=0?'+':'')+fmt(r.total)+'%'}</td>
+      <td>${r.rsi==null?'—':fmt(r.rsi,1)}</td></tr>`).join('')+
+    `</tbody><tfoot><tr style="font-weight:700;border-top:1px solid var(--border)">
+      <td colspan="8">${rows.length} holdings</td>
+      <td class="${dayTot>=0?'pos':'neg'}">${dayTot>=0?'+₹':'−₹'}${fmt0(Math.abs(dayTot))}</td>
+      <td>₹${fmt0(D.tot)}</td><td>100%</td><td></td><td></td></tr></tfoot>`;
+  const missing=rows.filter(r=>r.close==null).length;
+  setS('plHoldNote',`Priced at the ${D.date} close, day move measured against ${D.prevDate}.`+
+    (missing?` ${missing} holding(s) had no price that day, so the card total for this strategy is blank.`:''),
+    missing?'warn':'ok');
+}
+function plHoldDownload(){
+  try{
+    if(!PLDATA){setS('plStatus','Press Refresh first.','warn');return;}
+    const wb=XLSX.utils.book_new();
+    const head=['Symbol','Company','In since','Units','Buy','Prev close','Close','Day %','Day Rs',
+                'Value Rs','Weight %','Since buy %','RSI monthly'];
+    let sheets=0;
+    PLDATA.series.forEach(s=>{
+      const D=plHoldRows(s.p); if(!D)return;
+      const rows=[...D.rows].sort((a,b)=>(b.value||0)-(a.value||0)).map(r=>[
+        r.sym,r.name,r.month,+r.units.toFixed(3),+(+r.buy).toFixed(2),
+        r.prev==null?'':+r.prev.toFixed(2), r.close==null?'':+r.close.toFixed(2),
+        r.daypct==null?'':+r.daypct.toFixed(2), r.day==null?'':Math.round(r.day),
+        r.value==null?'':Math.round(r.value), r.weight==null?'':+r.weight.toFixed(2),
+        r.total==null?'':+r.total.toFixed(2), r.rsi==null?'':+(+r.rsi).toFixed(2)]);
+      rows.push([]);
+      rows.push(['TOTAL','','','','','','','',
+        Math.round(D.rows.reduce((x,r)=>x+(r.day||0),0)),Math.round(D.tot),100,'','']);
+      const ws=XLSX.utils.aoa_to_sheet([head].concat(rows));
+      ws['!cols']=head.map((h,i)=>({wch:i===1?28:13}));
+      XLSX.utils.book_append_sheet(wb,ws,s.label.slice(0,28));
+      sheets++;
+    });
+    if(!sheets){setS('plStatus','No holdings to export.','warn');return;}
+    const fn=`holdings_${PLDATA.dates[PLDATA.dates.length-1]}.xlsx`;
+    if(window.__wbSink)window.__wbSink(wb,fn); else XLSX.writeFile(wb,fn);
+    setS('plStatus',`Exported ${sheets} portfolio(s).`,'ok');
+  }catch(e){setS('plStatus','Download failed: '+e.message,'warn');}
+}
+/* --- why the strategy page and this card can disagree ---
+   The strategy page values holdings at the last price the RUN recorded (h.lastClose).
+   This page values them at the newest close. Any holding that was missing from the
+   scan on the run's final step keeps an older price, so the two totals drift apart. */
+function plReconcile(){
+  const box=document.getElementById('plCheck'); if(!box)return;
+  if(!PLLAST){box.innerHTML='';return;}
+  const blocks=[];
+  PLDEFS.forEach(([p,label,color])=>{
+    const S=STRATS[p]&&STRATS[p].S;
+    if(!S||!S.holdings||!S.holdings.length)return;
+    let stratV=0, liveV=0, missing=0; const bad=[];
+    S.holdings.forEach(h=>{
+      const now=PLLAST.px.get(h.sym);
+      const sv=h.units*h.lastClose;
+      stratV+=sv;
+      if(now==null){missing++;return;}
+      liveV+=h.units*now;
+      if(Math.abs(now-h.lastClose)>Math.max(0.01,h.lastClose*0.001))
+        bad.push({sym:h.sym,units:h.units,was:h.lastClose,now,d:h.units*(now-h.lastClose)});
+    });
+    const gap=liveV-stratV;
+    if(Math.abs(gap)<Math.max(1,stratV*0.0005)&&!missing)return;   // they agree, say nothing
+    bad.sort((a,b)=>Math.abs(b.d)-Math.abs(a.d));
+    blocks.push(`<div style="margin-bottom:12px">
+      <div style="font-weight:700;color:${color};margin-bottom:4px">${label}</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">
+        Strategy page shows <b>₹${fmt0(stratV)}</b> · this page shows <b>₹${fmt0(liveV)}</b> ·
+        difference <span class="${gap>=0?'pos':'neg'}">${gap>=0?'+':'−'}₹${fmt0(Math.abs(gap))}</span>
+        ${missing?` · ${missing} holding(s) have no price on ${PLLAST.date}`:''}
+        ${bad.length?` · ${bad.length} holding(s) still carry an older price`:''}
+      </div>
+      ${bad.length?`<div class="tblwrap" style="max-height:220px"><table>
+        <thead><tr><th>Symbol</th><th>Units</th><th>Price in the run</th><th>Close ${PLLAST.date}</th><th>Difference (₹)</th></tr></thead>
+        <tbody>${bad.slice(0,40).map(r=>`<tr><td><b>${r.sym}</b></td><td>${fmt(r.units,2)}</td>
+          <td>${fmt(r.was)}</td><td>${fmt(r.now)}</td>
+          <td class="${r.d>=0?'pos':'neg'}">${r.d>=0?'+':'−'}₹${fmt0(Math.abs(r.d))}</td></tr>`).join('')}</tbody>
+      </table></div>`:''}
+    </div>`);
+  });
+  box.innerHTML=blocks.length
+    ? `<div class="subcard" style="margin-top:0">
+         <div class="section-head">Price check — why the strategy page shows a different total</div>
+         <div class="status" style="margin:0 0 10px">Each strategy page values your holdings at the last price its own run recorded. This page uses the newest close. Press <b>Sync prices</b> to bring the strategy pages up to ${PLLAST.date}.</div>
+         ${blocks.join('')}
+       </div>` : '';
+}
+function plSyncPrices(){
+  if(!PLLAST){setS('plStatus','Refresh first.','warn');return;}
+  let touched=0, strategies=0;
+  PLDEFS.forEach(([p])=>{
+    const S=STRATS[p]&&STRATS[p].S;
+    if(!S||!S.holdings||!S.holdings.length)return;
+    let n=0;
+    S.holdings.forEach(h=>{
+      const px=PLLAST.px.get(h.sym);
+      if(px!=null&&px!==h.lastClose){h.lastClose=px;n++;}
+      const r=PLLAST.rsi.get(h.sym); if(r!=null)h.rsi=r;
+    });
+    if(!n)return;
+    touched+=n; strategies++;
+    const v=S.holdings.reduce((s,h)=>s+h.units*h.lastClose,0);
+    if(S.series&&S.series.length&&S.series[S.series.length-1].month===S.month)
+      S.series[S.series.length-1].value=v;
+    try{localStorage.setItem('strat_'+p,JSON.stringify(S));}catch(e){}
+    try{STRATS[p].render('prices marked to '+PLLAST.date);}catch(e){}
+  });
+  plReconcile();
+  setS('plStatus',touched?`Marked ${touched} holding(s) across ${strategies} strategy(ies) to the ${PLLAST.date} close — the strategy pages now match these cards.`
+                        :'Every holding was already priced at the latest close.','ok');
 }
 function plRender(){
   const {dates,series,nifty}=PLDATA;
@@ -3002,6 +3186,8 @@ function plRender(){
   const now=new Date().toISOString().slice(0,10);
   const stale=dates[d0]<now;
   setS('plStatus',`Data as of ${dates[d0]}${stale?` (today's file arrives after 6:30 PM)`:''} · this month measured from ${dates[baseIdx]} close · last ${labels.length} trading days · valued on current holdings.`,'ok');
+  try{plReconcile();}catch(e){}
+  try{plHoldRender();}catch(e){}
 }
 function plDownload(){
   try{
