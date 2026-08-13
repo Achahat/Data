@@ -103,7 +103,7 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
       <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="t3">Multi Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a></div></div>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
       <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
@@ -681,6 +681,54 @@ a{color:var(--accent);}
   </div>
 </div>
 
+<!-- BUY & HOLD: OVERSOLD BASKET, YOUR OWN PICKS -->
+<div class="card hidden" id="pane-bh">
+  <div class="section-head">Buy &amp; Hold — pick from the oversold list and sit on it<span class="pill" style="color:var(--accent);border-color:var(--accent)">Monthly bars</span></div>
+  <div id="bhSetup">
+    <div class="row">
+      <div><label>Buy at the end of</label>
+        <select id="bhMonth">
+          <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select></div>
+      <div><label>Year</label><select id="bhYear"></select></div>
+      <div><label>Monthly RSI below</label><input type="number" id="bhRsi" style="width:100px" value="40"></div>
+      <div><label>Monthly %K below</label><input type="number" id="bhStoch" style="width:100px" value="5"></div>
+      <div><label>Monthly %K length</label><input type="number" id="bhKlen" style="width:110px" value="14" min="2"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="bhMc" style="width:110px" value="1000"></div>
+      <div><label>Shares to scan</label><input type="number" id="bhUni" style="width:100px" value="800" min="50" max="2500"></div>
+      <button onclick="bhScreen()">Find oversold shares</button>
+    </div>
+    <div class="status" id="bhSetupStatus">Screens every share for the month you choose and lists the ones that were oversold on monthly bars. Tick the ones you actually want — you are not obliged to buy them all.</div>
+    <div class="row" style="margin-bottom:4px">
+      <div><label>Amount per share (₹)</label><input type="number" id="bhAmt" style="width:130px" value="100000"></div>
+      <div><label>Hold for (months)</label><input type="number" id="bhHold" style="width:110px" value="12" min="1" max="360"></div>
+      <div class="row" style="margin:0;gap:6px;align-items:center"><label style="margin:0">or hold till the latest data</label><input type="checkbox" id="bhTillNow"></div>
+      <button class="ghost mini" onclick="pickAll('bh',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('bh',false)">Unselect all</button>
+      <span class="pill" id="bhPickCount"></span>
+      <button class="ghost hidden" id="bhStartBtn" onclick="bhRun()">Buy the ticked shares ▶</button>
+    </div>
+    <div class="tblwrap" style="max-height:460px"><table id="bhPickTbl"></table></div>
+  </div>
+  <div id="bhRunBox" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="bhHead" style="font-size:14px"></div>
+      <div>
+        <button class="ghost" onclick="bhDownload('xlsx')">⬇ Download Excel</button>
+        <button class="ghost" onclick="bhDownload('csv')">Download CSV</button>
+        <button class="ghost" onclick="bhReset()">↺ New basket</button>
+      </div>
+    </div>
+    <div class="row" id="bhSummary" style="margin-top:10px;gap:22px"></div>
+    <div class="chartbox" style="height:300px"><canvas id="bhChart"></canvas></div>
+    <div class="chartbox" style="height:220px;margin-top:10px"><canvas id="bhChart2"></canvas></div>
+    <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="bhTbl"></table></div>
+  </div>
+</div>
+
 <!-- RAW DATA: MONTHLY RSI -->
 <div class="card hidden" id="pane-mr">
   <div class="section-head">Monthly RSI — how many shares cross a level, month by month</div>
@@ -1162,6 +1210,7 @@ function afterLoad(){
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
   try{FUTC.clear(); ixRollAlert();}catch(e){}
+  try{scanRestoreAll();}catch(e){}
 }
 let NAMEMAP={};
 function showOffline(msg){
@@ -1241,7 +1290,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -2433,7 +2482,7 @@ async function ssRun(){
       while(idx<uni.length){const my=uni[idx++]; await scanSym(my);}
     }));
     SSRES.sort((a,b)=>b.sig.localeCompare(a.sig));
-    SSPARAMS=[R,S,N,F,tf]; ssRender(R,S,N,F,tf);
+    SSPARAMS=[R,S,N,F,tf]; ssRender(R,S,N,F,tf); scanSave('ss');
   }finally{SSRUNNING=false;}
 }
 function ssRerender(){ if(SSPARAMS) ssRender.apply(null,SSPARAMS); }
@@ -2633,7 +2682,7 @@ async function shRun(){
     if(df)SHRES=SHRES.filter(r=>String(r.entryDate)>=df);
     if(dt)SHRES=SHRES.filter(r=>String(r.entryDate)<=dt+'~');
     SHRES.sort((a,b)=>String(b.entryDate).localeCompare(String(a.entryDate)));
-    shRender();
+    shRender(); scanSave('sh');
   }finally{SHRUNNING=false;}
 }
 function shRender(){
@@ -2950,7 +2999,7 @@ async function mrRun(){
   if(!out.length){setS('mrStatus','No trading data in that range.','warn');
     g('mrTbl').innerHTML='';g('mrSummary').innerHTML='';g('mrDetail').innerHTML='';return;}
   MRRES={out,lvl,above,mmin,from,to};
-  mrRender();
+  mrRender(); scanSave('mr');
 }
 function mrRender(){
   const {out,lvl,above,mmin}=MRRES;
@@ -2994,6 +3043,11 @@ function mrRender(){
 function mrShow(i){
   const o=MRRES&&MRRES.out[i]; if(!o)return;
   const d=document.getElementById('mrDetail');
+  if(o.n>0&&!o.rows.length){
+    d.innerHTML=`<div class="subcard"><div class="section-head">${o.month} — ${o.n} share(s)</div>
+      <div class="status warn">The share list was too big to keep after a reload; press Run to rebuild it.</div></div>`;
+    return;
+  }
   if(!o.rows.length){
     d.innerHTML=`<div class="subcard"><div class="section-head">${o.month} — nothing qualified</div></div>`;return;}
   d.innerHTML=`<div class="subcard">
@@ -4039,7 +4093,7 @@ async function ix5Run(){
     }));
     res.sort((a,b)=>b.d.localeCompare(a.d));
     IX5RES={res,rB,kB,rS,kS,mcMin,mcMax:mcMaxRaw,scanned:uni.length,noMcap,outBand};
-    ix5Render();
+    ix5Render(); scanSave('ix5');
   }finally{ IX5RUNNING=false; }
 }
 function ix5Render(){
@@ -4135,6 +4189,260 @@ async function ixRollAlert(){
        </div>` : '';
 }
 
+/* ============ Buy & Hold: oversold screen, your own picks, monthly bars ============ */
+let BHCAND=[], BHRES=null, BHBUSY=false, bhCh1=null, bhCh2=null;
+const bhg=id=>document.getElementById(id);
+async function bhScreen(){
+  if(BHBUSY)return;
+  if(!MANIFEST){setS('bhSetupStatus','Not connected to data yet.','warn');return;}
+  const mth=bhg('bhYear').value+'-'+bhg('bhMonth').value;
+  const rMax=+bhg('bhRsi').value, kMax=+bhg('bhStoch').value;
+  const KL=Math.max(2,+bhg('bhKlen').value||14);
+  const mcMin=+bhg('bhMc').value||0;
+  const cap=Math.max(50,Math.min(+bhg('bhUni').value||800,2500));
+  BHBUSY=true; BHCAND=[];
+  try{
+    setS('bhSetupStatus','building the universe…','');
+    const dates=await getScanDates();
+    const sd=dates&&dates.length?dates[dates.length-1]:null;
+    if(!sd){setS('bhSetupStatus','Scan index unavailable.','warn');return;}
+    const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
+      .filter(r=>r.mcap_cr!=null).sort((a,b)=>b.mcap_cr-a.mcap_cr).slice(0,cap).map(r=>r.symbol);
+    let done=0;
+    const look=async sym=>{
+      try{
+        const daily=await loadSeries('eq',sym);
+        const mcapOn=new Map(daily.filter(r=>r.mcap_cr!=null).map(r=>[r.date,r.mcap_cr]));
+        let bars=resample(daily,'M');
+        if(KL!==14){bars=bars.map(b=>({...b})); stochCalc(bars,KL,3,3);}
+        const i=bars.findIndex(b=>b.date.slice(0,7)===mth);
+        if(i<0)return;
+        const b=bars[i];
+        if(b.rsi14==null||b.stoch_k==null)return;
+        if(!(b.rsi14<rMax&&b.stoch_k<kMax))return;
+        const mc=mcapOn.get(b.date);
+        if(mcMin>0&&(mc==null||mc<mcMin))return;
+        BHCAND.push({sym,date:b.date,close:b.close,rsi:b.rsi14,k:b.stoch_k,mc:mc??null,i});
+      }catch(e){}
+      done++;
+      if(done%25===0)setS('bhSetupStatus',`screening… ${done}/${uni.length} shares · ${BHCAND.length} oversold`,'');
+    };
+    const pool=8; let idx=0;
+    await Promise.all(Array.from({length:pool},async()=>{ while(idx<uni.length){ await look(uni[idx++]); } }));
+    BHCAND.sort((a,b)=>a.rsi-b.rsi);
+    bhRenderPicks(mth,rMax,kMax,mcMin);
+  }finally{ BHBUSY=false; }
+}
+function bhRenderPicks(mth,rMax,kMax,mcMin){
+  const t=bhg('bhPickTbl');
+  if(!BHCAND.length){
+    t.innerHTML='';
+    bhg('bhStartBtn').classList.add('hidden');
+    setS('bhSetupStatus',`Nothing was oversold in ${mth} at Monthly RSI < ${rMax} and Monthly %K < ${kMax}`+
+      (mcMin?` with mcap ≥ ₹${fmt0(mcMin)} cr`:'')+'. Loosen the levels and try again.','warn');
+    return;
+  }
+  t.innerHTML='<thead><tr><th></th><th style="text-align:left">Symbol</th><th>Monthly RSI</th><th>Monthly %K</th>'+
+    '<th>Close</th><th>Mcap ₹ cr</th></tr></thead><tbody>'+
+    BHCAND.map(c=>`<tr><td><input type="checkbox" class="bhPick" value="${c.sym}" onchange="updatePickCount('bh')"></td>`+
+      `<td style="text-align:left"><b>${c.sym}</b>${NAMEMAP[c.sym]?`<br><span style="color:var(--muted);font-size:11px">${NAMEMAP[c.sym]}</span>`:''}</td>`+
+      `<td>${fmt(c.rsi,1)}</td><td>${fmt(c.k,1)}</td><td>${fmt(c.close)}</td>`+
+      `<td>${c.mc==null?'—':fmt0(c.mc)}</td></tr>`).join('')+'</tbody>';
+  bhg('bhStartBtn').classList.remove('hidden');
+  updatePickCount('bh');
+  setS('bhSetupStatus',`${BHCAND.length} share(s) were oversold at the end of ${mth} — Monthly RSI < ${rMax}, Monthly %K < ${kMax}`+
+    (mcMin?`, mcap ≥ ₹${fmt0(mcMin)} cr`:'')+'. Tick the ones you want, set the amount and holding period, then buy.','ok');
+}
+async function bhRun(){
+  const picked=[...document.querySelectorAll('.bhPick:checked')].map(c=>c.value);
+  if(!picked.length){setS('bhSetupStatus','Tick at least one share.','warn');return;}
+  const amt=+bhg('bhAmt').value||100000;
+  const hold=Math.max(1,+bhg('bhHold').value||12);
+  const tillNow=bhg('bhTillNow').checked;
+  const KL=Math.max(2,+bhg('bhKlen').value||14);
+  setS('bhSetupStatus','valuing the basket…','');
+  const rows=[]; let cash=0, invested=0;
+  const curves=[];
+  for(const sym of picked){
+    const c=BHCAND.find(x=>x.sym===sym); if(!c)continue;
+    let bars=resample(await loadSeries('eq',sym),'M');
+    if(KL!==14){bars=bars.map(b=>({...b})); stochCalc(bars,KL,3,3);}
+    const i=bars.findIndex(b=>b.date===c.date);
+    if(i<0)continue;
+    const endI=tillNow?bars.length-1:Math.min(i+hold,bars.length-1);
+    const buy=bars[i].close;
+    const units=Math.floor(amt/buy);          // whole shares, the rest stays as cash
+    if(!units)continue;
+    cash+=amt-units*buy; invested+=amt;
+    rows.push({sym,name:NAMEMAP[sym]||'',buyDate:bars[i].date,buy,units,cost:units*buy,
+      rsi:c.rsi,k:c.k,mc:c.mc,exitDate:bars[endI].date,exit:bars[endI].close,
+      months:endI-i,value:units*bars[endI].close,
+      ret:(bars[endI].close-buy)/buy*100,
+      partial:!tillNow&&(i+hold>bars.length-1)});
+    curves.push({units,bars,i,endI});
+  }
+  if(!rows.length){setS('bhSetupStatus','None of those could be priced for that month.','warn');return;}
+  // month-by-month value of the whole basket
+  const span=Math.max(...curves.map(c=>c.endI-c.i));
+  const labels=[], values=[];
+  for(let step=0;step<=span;step++){
+    let v=cash, lbl=null;
+    curves.forEach(c=>{
+      const j=Math.min(c.i+step,c.endI);
+      v+=c.units*c.bars[j].close;
+      if(!lbl||c.bars[j].date>lbl)lbl=c.bars[j].date;
+    });
+    labels.push(lbl); values.push(v);
+  }
+  // NIFTY 50 on the same money, same months
+  let nifty=null;
+  try{
+    const nb=resample(await loadSeries('ix','NIFTY_50'),'M');
+    const map=new Map(nb.map(b=>[b.date.slice(0,7),b.close]));
+    const base=map.get(labels[0].slice(0,7));
+    if(base)nifty=labels.map(d=>{const v=map.get(d.slice(0,7));return v?+(invested*v/base).toFixed(0):null;});
+  }catch(e){}
+  BHRES={rows,cash,invested,labels,values,nifty,hold,tillNow};
+  bhRender();
+  scanSave('bh');
+}
+function bhRender(){
+  const {rows,cash,invested,labels,values,nifty,hold,tillNow}=BHRES;
+  bhg('bhSetup').classList.add('hidden'); bhg('bhRunBox').classList.remove('hidden');
+  const final=values[values.length-1];
+  const ret=(final-invested)/invested*100;
+  const months=labels.length-1;
+  const cagr=months>=12?((Math.pow(final/invested,12/months)-1)*100):null;
+  let pk=-Infinity,dd=0; values.forEach(v=>{if(v>pk)pk=v;if((pk-v)/pk*100>dd)dd=(pk-v)/pk*100;});
+  const winners=rows.filter(r=>r.ret>0).length;
+  const best=rows.reduce((a,b)=>b.ret>a.ret?b:a), worst=rows.reduce((a,b)=>b.ret<a.ret?b:a);
+  const nif=nifty&&nifty[nifty.length-1]?(nifty[nifty.length-1]-invested)/invested*100:null;
+  const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+  bhg('bhSummary').innerHTML=
+    box('Shares held',rows.length)+
+    box('Invested','₹'+fmt0(invested))+
+    box('Value now','₹'+fmt0(final),ret>=0?'pos':'neg')+
+    box('Total return',(ret>=0?'+':'')+fmt(ret)+'%',ret>=0?'pos':'neg')+
+    (cagr!=null?box('CAGR',(cagr>=0?'+':'')+fmt(cagr)+'%',cagr>=0?'pos':'neg'):'')+
+    box('Winners',`${winners} of ${rows.length}`,winners*2>=rows.length?'pos':'neg')+
+    box('Best',`${best.sym} ${(best.ret>=0?'+':'')+fmt(best.ret)}%`,'pos')+
+    box('Worst',`${worst.sym} ${fmt(worst.ret)}%`,'neg')+
+    box('Max drawdown','-'+fmt(dd)+'%','neg')+
+    (nif!=null?box('NIFTY 50 (Monthly)',(nif>=0?'+':'')+fmt(nif)+'%',ret>=nif?'pos':'neg'):'')+
+    box('Cash left','₹'+fmt0(cash));
+  if(bhCh1){try{bhCh1.destroy();}catch(e){}bhCh1=null;}
+  const ds=[{label:'Basket (₹)',data:values,borderColor:'#22d3ee',backgroundColor:'rgba(34,211,238,.12)',
+             fill:true,borderWidth:2.4,pointRadius:0,tension:.25}];
+  if(nifty)ds.push({label:'NIFTY 50, same money',data:nifty,borderColor:'#7d8998',borderWidth:1.4,
+             borderDash:[6,4],pointRadius:0,tension:.25});
+  bhCh1=new Chart(bhg('bhChart'),{type:'line',data:{labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#c9d1d9',boxWidth:12}}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'rgba(255,255,255,.05)'}},
+              y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+  if(bhCh2){try{bhCh2.destroy();}catch(e){}bhCh2=null;}
+  const sorted=[...rows].sort((a,b)=>b.ret-a.ret);
+  bhCh2=new Chart(bhg('bhChart2'),{type:'bar',
+    data:{labels:sorted.map(r=>r.sym),datasets:[{label:'Return %',data:sorted.map(r=>+r.ret.toFixed(2)),
+      backgroundColor:sorted.map(r=>r.ret>=0?'#3fb950':'#f85149'),borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{ticks:{color:'#8b949e',maxRotation:90,minRotation:45},grid:{display:false}},
+              y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+  ixTable('bhTbl',['Symbol','Company','Bought','Buy price','Units','Cost ₹','Monthly RSI','Monthly %K',
+      'Mcap ₹ cr','Valued on','Price','Months','Value ₹','Return'],
+    sorted.map(r=>[`<b>${r.sym}</b>`,r.name,r.buyDate,fmt(r.buy),fmt0(r.units),fmt0(r.cost),
+      fmt(r.rsi,1),fmt(r.k,1),r.mc==null?'—':fmt0(r.mc),
+      r.exitDate+(r.partial?' <span class="warn">(data ends)</span>':''),fmt(r.exit),r.months,fmt0(r.value),
+      `<span class="${r.ret>=0?'pos':'neg'}">${(r.ret>=0?'+':'')+fmt(r.ret)}%</span>`]));
+  const partial=rows.filter(r=>r.partial).length;
+  setS('bhHead',`Bought ${rows.length} share(s) at the ${rows[0].buyDate} close, ₹${fmt0(invested)} in, `+
+    (tillNow?'held to the latest month':`held ${hold} month(s)`)+
+    ` — now ₹${fmt0(final)}, ${(ret>=0?'+':'')+fmt(ret)}%.`+
+    (partial?` ${partial} share(s) ran out of data before the full holding period.`:''),ret>=0?'ok':'warn');
+}
+function bhReset(){
+  BHRES=null; try{localStorage.removeItem('scan_bh');}catch(e){}
+  bhg('bhRunBox').classList.add('hidden'); bhg('bhSetup').classList.remove('hidden');
+  setS('bhSetupStatus','Screens every share for the month you choose and lists the ones that were oversold on monthly bars. Tick the ones you actually want.','');
+}
+function bhDownload(kind){
+  if(!BHRES)return setS('bhHead','Buy a basket first.','warn');
+  const {rows,invested,cash,labels,values,nifty}=BHRES;
+  const head=['Symbol','Company','Bought','Buy price','Units','Cost Rs','Monthly RSI','Monthly %K',
+              'Mcap Rs cr','Valued on','Price','Months held','Value Rs','Return %'];
+  const body=rows.map(r=>[r.sym,r.name,r.buyDate,+r.buy.toFixed(2),r.units,Math.round(r.cost),
+    +r.rsi.toFixed(2),+r.k.toFixed(2),r.mc==null?'':Math.round(r.mc),r.exitDate,+r.exit.toFixed(2),
+    r.months,Math.round(r.value),+r.ret.toFixed(2)]);
+  body.push([]);
+  body.push(['TOTAL','','','','',Math.round(invested-cash),'','','','','','',
+    Math.round(values[values.length-1]-cash),
+    +(((values[values.length-1]-invested)/invested)*100).toFixed(2)]);
+  const ch=['Month','Basket Rs','NIFTY 50 same money Rs'];
+  const cr=labels.map((d,i)=>[d,Math.round(values[i]),nifty&&nifty[i]!=null?nifty[i]:'']);
+  ixExport(kind,head,body,'buy_and_hold_'+rows[0].buyDate,'bhHead',{name:'Monthly value',head:ch,rows:cr});
+}
+
+/* ============ scans survive a reload (kept on this device) ============ */
+function scanInputs(ids){const o={};ids.forEach(i=>{const e=document.getElementById(i);
+  if(e)o[i]=(e.type==='checkbox')?e.checked:e.value;});return o;}
+function scanApplyInputs(o){if(!o)return;Object.keys(o).forEach(i=>{const e=document.getElementById(i);
+  if(!e)return; if(e.type==='checkbox')e.checked=!!o[i]; else e.value=o[i];});}
+const SCANS={
+  ss:{ids:['ssRsi','ssStoch','ssKlen','ssWin','ssFwd','ssTf','ssMc','ssOpenOnly'],status:'ssStatus',
+      get:()=>({res:SSRES,params:SSPARAMS}),
+      put:d=>{SSRES=d.res||[];SSPARAMS=d.params||null;if(SSPARAMS&&SSRES.length)ssRender.apply(null,SSPARAMS);},
+      trims:[d=>({res:(d.res||[]).slice(0,1500),params:d.params}),
+              d=>({res:(d.res||[]).slice(0,400),params:d.params})]},
+  sh:{ids:['shMrsi','shFloor','shMult','shDrsi','shRise','shStop','shTP','shJFall','shPhase','shFrom','shTo','shOpenOnly'],
+      status:'shStatus',
+      get:()=>({res:SHRES}),
+      put:d=>{SHRES=d.res||[];if(SHRES.length)shRender();},
+      trims:[d=>({res:(d.res||[]).slice(0,1500)}),d=>({res:(d.res||[]).slice(0,400)})]},
+  ix5:{ids:['ix5RsiB','ix5StB','ix5RsiS','ix5StS','ix5Join','ix5Xjoin','ix5Klen','ix5McMin','ix5McMax','ix5Uni','ix5From','ix5To','ix5OpenOnly'],
+      status:'ix5Status',
+      get:()=>({r:IX5RES}),
+      put:d=>{IX5RES=d.r||null;if(IX5RES)ix5Render();},
+      trims:[d=>d.r?{r:Object.assign({},d.r,{res:d.r.res.slice(0,1500)})}:d,
+              d=>d.r?{r:Object.assign({},d.r,{res:d.r.res.slice(0,400)})}:d]},
+  bh:{ids:['bhMonth','bhYear','bhRsi','bhStoch','bhKlen','bhMc','bhUni','bhAmt','bhHold','bhTillNow'],
+      status:'bhHead',
+      get:()=>({r:BHRES,cand:BHCAND}),
+      put:d=>{BHRES=d.r||null;BHCAND=d.cand||[];if(BHRES)bhRender();},
+      trims:[d=>({r:d.r,cand:[]})]},
+  mr:{ids:['mrMonth','mrYear','mrMonth2','mrYear2','mrDir','mrRsi','mrMc'],status:'mrStatus',
+      get:()=>({r:MRRES}),
+      put:d=>{MRRES=d.r||null;if(MRRES)mrRender();},
+      trims:[d=>d.r?{r:Object.assign({},d.r,{out:d.r.out.map(o=>Object.assign({},o,{rows:o.rows.slice(0,25)}))})}:d,
+              d=>d.r?{r:Object.assign({},d.r,{out:d.r.out.map(o=>Object.assign({},o,{rows:[]})),countsOnly:true})}:d]}
+};
+function scanSave(k){
+  const D=SCANS[k]; if(!D)return;
+  const attempt=p=>{try{localStorage.setItem('scan_'+k,JSON.stringify(p));return true;}catch(e){return false;}};
+  const payload={t:Date.now(),i:scanInputs(D.ids),d:D.get()};
+  if(attempt(payload))return;
+  for(const f of (D.trims||[])){                    // shed detail until it fits
+    try{ if(attempt({t:payload.t,i:payload.i,d:f(payload.d),cut:true}))return; }catch(e){}
+  }
+  try{localStorage.removeItem('scan_'+k);}catch(e){}
+  const e=document.getElementById(D.status);
+  if(e)e.innerHTML+=' <span class="pill">too large to keep after a reload</span>';
+}
+function scanRestore(k){
+  const D=SCANS[k]; if(!D)return false;
+  let p=null; try{p=JSON.parse(localStorage.getItem('scan_'+k)||'null');}catch(e){}
+  if(!p||!p.d)return false;
+  scanApplyInputs(p.i);
+  try{ D.put(p.d); }catch(e){ return false; }
+  const when=new Date(p.t).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+  const e=document.getElementById(D.status);
+  if(e)e.innerHTML+=` <span class="pill">from your run on ${when}${p.cut?' · trimmed to fit':''}</span>`;
+  return true;
+}
+function scanRestoreAll(){ Object.keys(SCANS).forEach(k=>{try{scanRestore(k);}catch(e){}}); }
+function scanClear(k){ try{localStorage.removeItem('scan_'+k);}catch(e){} }
+
 (function ixInit(){
   ['ix1Sym','ix2Sym','ix3Sym','ix4Sym'].forEach(id=>{
     const s=ixg(id); if(!s||s.options.length)return;
@@ -4185,6 +4493,9 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
     ys.value=cy;
   }
   document.getElementById('mmMonth2').value=String(to.getMonth()+1).padStart(2,'0');
+  const bys=document.getElementById('bhYear');
+  if(bys){for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;bys.appendChild(o);}
+    bys.value=cy-2; document.getElementById('bhMonth').value='01';}
   for(const id of ['mrYear','mrYear2']){
     const mys=document.getElementById(id);
     for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;mys.appendChild(o);}
