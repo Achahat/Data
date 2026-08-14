@@ -98,14 +98,14 @@ a{color:var(--accent);}
   <div class="brand"><span class="dot" id="liveDot"></span><span id="liveText">Connecting…</span>
     <button class="ghost mini hidden" id="localBtn" onclick="pickLocal()">Use local data folder</button></div>
   <div class="nav" id="mainNav">
-    <div class="nav-item"><button class="nav-btn">Raw Data ▾</button>
-      <div class="nav-drop"><a data-pane="dl">Data Download</a><a data-pane="mm">Multi Month</a><a data-pane="mr">Monthly RSI</a></div></div>
+    <div class="nav-item"><button class="nav-btn">Data ▾</button>
+      <div class="nav-drop"><a data-pane="dl">Raw Data</a><a data-pane="mm">Multi Month Data</a><a data-pane="mr">RSI Count</a></div></div>
     <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
       <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="t3">Multi Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
       <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a></div></div>
+      <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a><a data-pane="sn">Nifty-Timed Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
       <div class="nav-drop"><a data-pane="ix1">RSI + Stoch (Futures)</a><a data-pane="ix5">RSI + Stoch (Shares)</a><a data-pane="ix2">Buy Grid</a><a data-pane="ix3">Short Grid</a><a data-pane="ix4">Rollover / Carry Cost</a></div></div>
     <div class="nav-item"><button class="nav-btn">Tools ▾</button>
@@ -119,11 +119,18 @@ a{color:var(--accent);}
 
 <!-- DATA DOWNLOAD (step 1) -->
 <div class="card hidden" id="pane-dl">
-  <div class="section-head">Data Download</div>
+  <div class="section-head">Raw Data</div>
   <div class="row">
     <div><label>From</label><input type="date" id="dlFrom"></div>
     <div><label>To (RSI test date)</label><input type="date" id="dlTo"></div>
-    <div><label id="dlL1">Daily RSI min</label><input type="number" id="dlRsiMin" style="width:90px" placeholder="e.g. 80"></div>
+    <div><label id="dlL0">Daily RSI</label>
+      <select id="dlRsiOp" onchange="dlRsiOp()">
+        <option value="ge" selected>at or above</option>
+        <option value="le">at or below</option>
+        <option value="bt">between</option>
+      </select></div>
+    <div><label id="dlL1">Level</label><input type="number" id="dlRsiMin" style="width:90px" placeholder="e.g. 80"></div>
+    <div id="dlRsiMaxBox" class="hidden"><label id="dlL2">and</label><input type="number" id="dlRsiMax" style="width:90px" placeholder="e.g. 90"></div>
     <div><label>Min Mcap (₹ cr)</label><input type="number" id="dlMcMin" style="width:110px" placeholder="e.g. 1000"></div>
     <div><label>Data</label>
       <select id="dlTf" onchange="dlTfLabels()"><option value="D">Daily</option><option value="W">Weekly</option><option value="M">Monthly</option></select></div>
@@ -131,13 +138,13 @@ a{color:var(--accent);}
     <button class="ghost" onclick="dlMatches('xlsx')">Download Excel</button>
     <button class="ghost" onclick="dlMatches('csv')">Download CSV</button>
   </div>
-  <div class="status" id="dlStatus">Set the date range and RSI band — shares are matched by their RSI (of the chosen timeframe) on the To date, then their data for the whole range is downloaded.</div>
+  <div class="status" id="dlStatus">Pick the RSI condition — at or above, at or below, or between two levels. Shares are matched on their RSI (of the chosen timeframe) on the To date, then their data for the whole range is downloaded.</div>
   <div class="tblwrap"><table id="dlTbl"></table></div>
 </div>
 
 <!-- MULTI MONTH (step 2) -->
 <div class="card hidden" id="pane-mm">
-  <div class="section-head">Multi Month Download — monthly screen over your period</div>
+  <div class="section-head">Multi Month Data — monthly screen over your period</div>
   <div class="row">
     <div><label>From month</label>
       <select id="mmMonth">
@@ -155,13 +162,20 @@ a{color:var(--accent);}
         <option value="10">October</option><option value="11">November</option><option value="12">December</option>
       </select></div>
     <div><label>To year</label><select id="mmYear2"></select></div>
-    <div><label>Monthly RSI min</label><input type="number" id="mmRsi" style="width:100px" placeholder="e.g. 80"></div>
+    <div><label>Monthly RSI</label>
+      <select id="mmRsiOp" onchange="mmRsiOp()">
+        <option value="ge" selected>at or above</option>
+        <option value="le">at or below</option>
+        <option value="bt">between</option>
+      </select></div>
+    <div><label id="mmL1">Level</label><input type="number" id="mmRsiMin" style="width:90px" placeholder="e.g. 80"></div>
+    <div id="mmRsiMaxBox" class="hidden"><label id="mmL2">to</label><input type="number" id="mmRsiMax" style="width:90px" placeholder="e.g. 90"></div>
     <div><label>Min Mcap (₹ cr)</label><input type="number" id="mmMc" style="width:110px" placeholder="e.g. 1000"></div>
     <button onclick="mmFind()">Find shares</button>
     <button class="ghost" onclick="mmDownload('xlsx')">Download Excel</button>
     <button class="ghost" onclick="mmDownload('csv')">Download CSV</button>
   </div>
-  <div class="status" id="mmStatus">Every month in the period is screened on its last trading day.</div>
+  <div class="status" id="mmStatus">Every month in the period is screened on its last trading day — pick whether you want monthly RSI at or above a level, at or below it, or between two.</div>
   <div class="tblwrap"><table id="mmTbl"></table></div>
 </div>
 
@@ -173,7 +187,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="stDate"></div>
       <div><label>Monthly RSI min</label><input type="number" id="stRsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="stMc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="stAmt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="stAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="stNextM"></div>
       <button onclick="STRATS.st.screen()">Screen shares</button>
       <button class="ghost hidden" id="stStartBtn" onclick="STRATS.st.start()">Start strategy with selected ▶</button>
@@ -226,7 +240,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="mcDate"></div>
       <div><label>Monthly RSI min</label><input type="number" id="mcRsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="mcMc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="mcAmt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="mcAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div><label>Changes per month</label><input type="number" id="mcN" style="width:90px" value="2" min="1" max="10"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="mcNextM"></div>
       <button onclick="STRATS.mc.screen()">Screen shares</button>
@@ -286,8 +300,8 @@ a{color:var(--accent);}
         </select></div>
       <div><label>Start year</label><select id="acYear"></select></div>
       <div><label>Top N by Monthly RSI</label><input type="number" id="acN" style="width:80px" value="25"></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="acMc" style="width:110px" value="5000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="acAmt" style="width:120px" value="100000"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="acMc" style="width:110px" placeholder="e.g. 5000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="acAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun()">Run till today ▶</button>
     </div>
     <div class="status" id="acSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
@@ -331,7 +345,7 @@ a{color:var(--accent);}
   <div id="sxSetup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="sxDate"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="sxAmt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="sxAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div><label>Monthly RSI min</label><input type="number" id="sxRsi" style="width:100px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="sxMc" style="width:110px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="sxNextM"></div>
@@ -534,7 +548,6 @@ a{color:var(--accent);}
     <div><label>Monthly %K length</label><input type="number" id="ix5Klen" style="width:80px" value="14" min="2"></div>
     <div><label>Mcap from (₹ cr)</label><input type="number" id="ix5McMin" style="width:110px" value="5000"></div>
     <div><label>to (₹ cr, 0 = no cap)</label><input type="number" id="ix5McMax" style="width:120px" value="0"></div>
-    <div><label>Shares to scan</label><input type="number" id="ix5Uni" style="width:100px" value="800" min="50" max="2500"></div>
     <div><label>Entries from</label><input type="date" id="ix5From"></div>
     <div><label>to</label><input type="date" id="ix5To"></div>
     <button onclick="ix5Run()">Run scan</button>
@@ -542,7 +555,7 @@ a{color:var(--accent);}
     <button class="ghost" onclick="ix5Download('xlsx')">Download Excel</button>
     <button class="ghost" onclick="ix5Download('csv')">Download CSV</button>
   </div>
-  <div class="status" id="ix5Status">Monthly bars. A share is bought when its monthly RSI and Stoch %K are both oversold and its market cap sits inside your band on that month's close; it is sold when either turns. The band is checked on the entry month itself, so a share only counts if it really was that size at the time.</div>
+  <div class="status" id="ix5Status">Monthly bars, every listed share — no shortlist. A share is bought when its monthly RSI and Stoch %K are both oversold and its market cap sits inside your band on that month's close; it is sold when either turns. The band is checked on the entry month itself, so a share only counts if it really was that size at the time. A full pass reads about 3,000 files, so give it a few minutes.</div>
   <div class="row" id="ix5Summary" style="margin-top:10px;gap:22px"></div>
   <div class="chartbox" style="height:260px"><canvas id="ix5Chart"></canvas></div>
   <div class="tblwrap" style="max-height:520px;margin-top:12px"><table id="ix5Tbl"></table></div>
@@ -567,6 +580,32 @@ a{color:var(--accent);}
   <div class="tblwrap" style="max-height:480px;margin-top:12px"><table id="ix4Tbl"></table></div>
 </div>
 
+<!-- NIFTY-TIMED SHORT: index tells you when, weakest F&O stocks are what you short -->
+<div class="card hidden" id="pane-sn">
+  <div class="section-head">Nifty-Timed Short — the index calls the timing, F&O stocks take the position<span class="pill" style="color:var(--accent);border-color:var(--accent)">Daily bars</span></div>
+  <div class="row">
+    <div><label>Short when Nifty Daily RSI crosses up through</label><input type="number" id="snRsi" style="width:100px" value="60"></div>
+    <div><label>Cover when Nifty Daily %K falls to</label><input type="number" id="snStoch" style="width:100px" value="20"></div>
+    <div><label>Daily %K length</label><input type="number" id="snKlen" style="width:110px" value="14" min="2"></div>
+    <div><label>or cover after at most (trading days)</label><input type="number" id="snMaxDays" style="width:130px" placeholder="blank = no limit" min="1"></div>
+    <div><label>Stocks per trade</label><input type="number" id="snN" style="width:100px" value="25" min="1" max="200"></div>
+    <div><label>Rank F&amp;O stocks by Daily RSI</label>
+      <select id="snRank"><option value="low" selected>lowest first</option><option value="high">highest first</option></select></div>
+    <div><label>Amount per stock (₹)</label><input type="number" id="snAmt" style="width:130px" placeholder="e.g. 100000"></div>
+    <div><label>From</label><input type="date" id="snFrom"></div>
+    <div><label>to</label><input type="date" id="snTo"></div>
+    <div class="row" style="margin:0;gap:6px;align-items:center"><label style="margin:0">⚡ Open only</label><input type="checkbox" id="snOpenOnly" onchange="snRender()"></div>
+    <button onclick="snRun()">Run back-test</button>
+    <button class="ghost" onclick="snDownload('xlsx')">Download Excel</button>
+    <button class="ghost" onclick="snDownload('csv')">Download CSV</button>
+  </div>
+  <div class="status" id="snStatus">Every time the Nifty 50 daily RSI crosses up through your level, the weakest F&amp;O stocks by daily RSI are shorted at that day's close. The basket is covered on the first day the Nifty daily Stoch %K falls to your cover level — or after your maximum holding period, whichever comes first. Leave the day limit blank to wait for the Stoch signal however long it takes. One basket at a time.</div>
+  <div class="row" id="snSummary" style="margin-top:10px;gap:22px"></div>
+  <div class="chartbox" style="height:280px"><canvas id="snChart"></canvas></div>
+  <div class="tblwrap" style="max-height:420px;margin-top:12px"><table id="snTbl"></table></div>
+  <div id="snDetail"></div>
+</div>
+
 <!-- SAVED RUNS -->
 <div class="card hidden" id="pane-sr">
   <div class="section-head">Saved Runs</div>
@@ -589,7 +628,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="wkDate"></div>
       <div><label>Monthly RSI min</label><input type="number" id="wkRsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="wkMc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="wkAmt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="wkAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="hidden"><input type="checkbox" id="wkNextM"></div>
       <button onclick="STRATS.wk.screen()">Screen shares</button>
       <button class="ghost hidden" id="wkStartBtn" onclick="STRATS.wk.start()">Start strategy with selected ▶</button>
@@ -639,7 +678,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="twDate"></div>
       <div><label>Monthly RSI min</label><input type="number" id="twRsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="twMc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="twAmt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="twAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="hidden"><input type="checkbox" id="twNextM"></div>
       <button onclick="STRATS.tw.screen()">Screen shares</button>
       <button class="ghost hidden" id="twStartBtn" onclick="STRATS.tw.start()">Start strategy with selected ▶</button>
@@ -697,13 +736,12 @@ a{color:var(--accent);}
       <div><label>Monthly RSI below</label><input type="number" id="bhRsi" style="width:100px" value="40"></div>
       <div><label>Monthly %K below</label><input type="number" id="bhStoch" style="width:100px" value="5"></div>
       <div><label>Monthly %K length</label><input type="number" id="bhKlen" style="width:110px" value="14" min="2"></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="bhMc" style="width:110px" value="1000"></div>
-      <div><label>Shares to scan</label><input type="number" id="bhUni" style="width:100px" value="800" min="50" max="2500"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="bhMc" style="width:110px" placeholder="e.g. 1000"></div>
       <button onclick="bhScreen()">Find oversold shares</button>
     </div>
-    <div class="status" id="bhSetupStatus">Screens every share for the month you choose and lists the ones that were oversold on monthly bars. Tick the ones you actually want — you are not obliged to buy them all.</div>
+    <div class="status" id="bhSetupStatus">Screens every listed share for the month you choose and lists the ones that were oversold on monthly bars. Tick the ones you actually want — you are not obliged to buy them all. A full pass reads about 3,000 files, so give it a few minutes.</div>
     <div class="row" style="margin-bottom:4px">
-      <div><label>Amount per share (₹)</label><input type="number" id="bhAmt" style="width:130px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="bhAmt" style="width:130px" placeholder="e.g. 100000"></div>
       <div><label>Hold for (months)</label><input type="number" id="bhHold" style="width:110px" value="12" min="1" max="360"></div>
       <div class="row" style="margin:0;gap:6px;align-items:center"><label style="margin:0">or hold till the latest data</label><input type="checkbox" id="bhTillNow"></div>
       <button class="ghost mini" onclick="pickAll('bh',true)">Select all</button>
@@ -731,7 +769,7 @@ a{color:var(--accent);}
 
 <!-- RAW DATA: MONTHLY RSI -->
 <div class="card hidden" id="pane-mr">
-  <div class="section-head">Monthly RSI — how many shares cross a level, month by month</div>
+  <div class="section-head">RSI Count — how many shares sit at a level, month by month<span class="pill" style="color:var(--accent);border-color:var(--accent)">Monthly bars</span></div>
   <div class="row">
     <div><label>From month</label>
       <select id="mrMonth">
@@ -749,9 +787,14 @@ a{color:var(--accent);}
         <option value="10">October</option><option value="11">November</option><option value="12">December</option>
       </select></div>
     <div><label>Year</label><select id="mrYear2"></select></div>
-    <div><label>Monthly RSI is</label>
-      <select id="mrDir"><option value="above" selected>at or above</option><option value="below">at or below</option></select></div>
-    <div><label>Level</label><input type="number" id="mrRsi" style="width:90px" value="80"></div>
+    <div><label>Monthly RSI</label>
+      <select id="mrRsiOp" onchange="mrRsiOp()">
+        <option value="ge" selected>at or above</option>
+        <option value="le">at or below</option>
+        <option value="bt">between</option>
+      </select></div>
+    <div><label id="mrL1">Level</label><input type="number" id="mrRsiMin" style="width:90px" value="80"></div>
+    <div id="mrRsiMaxBox" class="hidden"><label id="mrL2">to</label><input type="number" id="mrRsiMax" style="width:90px" placeholder="e.g. 90"></div>
     <div><label>Min Mcap (₹ cr)</label><input type="number" id="mrMc" style="width:110px" placeholder="optional"></div>
     <button onclick="mrRun()">Run</button>
     <button class="ghost" onclick="mrDownload('xlsx')">Download Excel</button>
@@ -804,8 +847,8 @@ a{color:var(--accent);}
         </select></div>
       <div><label>Start year</label><select id="taYear"></select></div>
       <div><label>Top N by Monthly RSI</label><input type="number" id="taN" style="width:80px" value="25"></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="taMc" style="width:110px" value="5000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="taAmt" style="width:120px" value="100000"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="taMc" style="width:110px" placeholder="e.g. 5000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="taAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun('ta')">Run till today ▶</button>
     </div>
     <div class="status" id="taSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
@@ -849,7 +892,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="t1Date"></div>
       <div><label>Monthly RSI min</label><input type="number" id="t1Rsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="t1Mc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="t1Amt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="t1Amt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t1NextM"></div>
       <button onclick="STRATS.t1.screen()">Screen shares</button>
       <button class="ghost hidden" id="t1StartBtn" onclick="STRATS.t1.start()">Start strategy with selected ▶</button>
@@ -900,7 +943,7 @@ a{color:var(--accent);}
       <div><label>Start date</label><input type="date" id="t3Date"></div>
       <div><label>Monthly RSI min</label><input type="number" id="t3Rsi" style="width:100px" placeholder="e.g. 80"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="t3Mc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" value="100000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" placeholder="e.g. 100000"></div>
       <div><label>Changes per month</label><input type="number" id="t3N" style="width:90px" value="2" min="1" max="10"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t3NextM"></div>
       <button onclick="STRATS.t3.screen()">Screen shares</button>
@@ -985,8 +1028,8 @@ a{color:var(--accent);}
 <!-- SCREENER -->
 <div class="card hidden" id="pane-screener">
   <div class="row">
-    <div><label>RSI(14) daily min</label><input type="number" id="scRsiMin" style="width:90px"></div>
-    <div><label id="dlL2">Daily RSI max</label><input type="number" id="scRsiMax" style="width:90px"></div>
+    <div><label>Daily RSI(14) min</label><input type="number" id="scRsiMin" style="width:90px"></div>
+    <div><label>Daily RSI(14) max</label><input type="number" id="scRsiMax" style="width:90px"></div>
     <div><label>Mcap min (₹ cr)</label><input type="number" id="scMcMin" style="width:110px"></div>
     <div><label>Mcap max (₹ cr)</label><input type="number" id="scMcMax" style="width:110px"></div>
     <div><label>Price min</label><input type="number" id="scPrMin" style="width:90px"></div>
@@ -1199,7 +1242,9 @@ function afterLoad(){
   document.getElementById('liveDot').className='dot live';
   document.getElementById('liveText').textContent='Live Data';
   document.getElementById('localBtn').classList.add('hidden');
-  LOOKUP=[]; NAMEMAP={};
+  LOOKUP=[]; NAMEMAP={}; RENAMES={};
+  (MANIFEST.renames||[]).forEach(r=>{(RENAMES[r.new]=RENAMES[r.new]||[]).push(r);});
+  Object.keys(RENAMES).forEach(k=>RENAMES[k].sort((a,b)=>b.eff.localeCompare(a.eff)));
   MANIFEST.equities.forEach(e=>{
     NAMEMAP[e.symbol]=e.name||'';
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
@@ -1212,7 +1257,27 @@ function afterLoad(){
   try{FUTC.clear(); ixRollAlert();}catch(e){}
   try{scanRestoreAll();}catch(e){}
 }
-let NAMEMAP={};
+let NAMEMAP={}, RENAMES={};
+/* A share is stored under the ticker it uses TODAY, but a back-test bought it under the
+   ticker of the day — POONAWALLA traded as MAGMA until Aug 2021. Walk the rename chain
+   back so tables show what you would actually have bought. */
+function tickerOn(sym,date){
+  if(!date)return sym;
+  let cur=sym;
+  for(let hop=0;hop<8;hop++){
+    const list=RENAMES[cur];
+    if(!list)break;
+    const hit=list.find(r=>date<r.eff);
+    if(!hit)break;
+    cur=hit.old;
+  }
+  return cur;
+}
+function symCell(sym,date){
+  const then=tickerOn(sym,date);
+  return then===sym?`<b>${sym}</b>`
+    :`<b>${sym}</b><br><span style="color:var(--amber);font-size:11px">traded as ${then}</span>`;
+}
 function showOffline(msg){
   document.getElementById('liveDot').className='dot err';
   document.getElementById('liveText').textContent=msg;
@@ -1290,7 +1355,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -1344,20 +1409,23 @@ async function findShares(){
   const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
   const tf=document.getElementById('dlTf').value;
   const key=tf==='D'?'rsi_d':tf==='W'?'rsi_w':'rsi_m';
-  const vmin=document.getElementById('dlRsiMin').value;
+  const test=dlRsiTest();
   const vmc=document.getElementById('dlMcMin').value;
-  const mn=vmin===''?null:+vmin, mc=vmc===''?null:+vmc;
+  const mc=vmc===''?null:+vmc;
   MATCHES=rows.filter(r=>{
     const v=r[key];
     if(v==null)return false;
-    if(mn!=null&&v<mn)return false;
+    if(!test.f(v))return false;
     if(mc!=null&&!(r.mcap_cr!=null&&r.mcap_cr>=mc))return false;
     return true;
   });
-  DLSORT={col:'rsi',dir:-1};   // max RSI on top by default
+  const op=(document.getElementById('dlRsiOp')||{}).value||'ge';
+  DLSORT={col:'rsi',dir:op==='le'?1:-1};   // lowest first when hunting oversold
   renderDl();
-  const tfName=tf==='D'?'daily':tf==='W'?'weekly':'monthly';
-  setS('dlStatus',`${MATCHES.length.toLocaleString()} shares with ${tfName} RSI${mn!=null?' ≥ '+mn:''}${mc!=null?', mcap ≥ ₹'+fmt0(mc)+' cr':''} on ${sd} (ETFs & funds excluded). Click column headings to sort. Download fetches ${tfName} data for the full range.`,MATCHES.length?'ok':'warn');
+  const tfName=TFWORD[tf].toLowerCase();
+  setS('dlStatus',`${MATCHES.length.toLocaleString()} shares with ${tfName} RSI${test.txt}`+
+    `${mc!=null?', mcap ≥ ₹'+fmt0(mc)+' cr':''} on ${sd} (ETFs & funds excluded). `+
+    `Click column headings to sort. Download fetches ${tfName} data for the full range.`,MATCHES.length?'ok':'warn');
 }
 let DLSORT={col:'rsi',dir:-1};
 function dlKeys(){
@@ -1434,9 +1502,10 @@ async function mmFind(){
   const a=document.getElementById('mmYear').value+'-'+document.getElementById('mmMonth').value;
   const b=document.getElementById('mmYear2').value+'-'+document.getElementById('mmMonth2').value;
   if(a>b){setS('mmStatus','From month is after To month.','warn');return;}
-  const vr=document.getElementById('mmRsi').value, vm=document.getElementById('mmMc').value;
-  const rmin=vr===''?null:+vr, mmin=vm===''?null:+vm;
-  if(rmin==null&&mmin==null){setS('mmStatus','Set RSI and/or Mcap minimum.','warn');return;}
+  const test=rsiTest('mm');
+  const vm=document.getElementById('mmMc').value;
+  const mmin=vm===''?null:+vm;
+  if(test.txt===''&&mmin==null){setS('mmStatus','Set an RSI condition and/or a market-cap minimum.','warn');return;}
   const dates=await getScanDates();
   if(!dates||!dates.length){setS('mmStatus','Month scanning needs the scan index (MEGA/local mode).','warn');return;}
   const months=monthList(a,b);
@@ -1452,16 +1521,17 @@ async function mmFind(){
       const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
       const hits=rows.filter(r=>{
         if(r.rsi_m==null)return false;
-        if(rmin!=null&&r.rsi_m<rmin)return false;
+        if(!test.f(r.rsi_m))return false;
         if(mmin!=null&&!(r.mcap_cr!=null&&r.mcap_cr>=mmin))return false;
         return true;
-      }).sort((x,y)=>(y.rsi_m??-1)-(x.rsi_m??-1));
+      }).sort((x,y)=>test.op==='le'?((x.rsi_m??1e9)-(y.rsi_m??1e9)):((y.rsi_m??-1)-(x.rsi_m??-1)));
       MMRESULTS.push({month:mth,date:sd,rows:hits});
     }catch(e){}
   }
   renderMm();
   const total=MMRESULTS.reduce((s,m)=>s+m.rows.length,0);
-  setS('mmStatus',`${total.toLocaleString()} share-months across ${MMRESULTS.length} months (monthly RSI${rmin!=null?' ≥ '+rmin:''}${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}; ETFs & funds excluded).`,total?'ok':'warn');
+  setS('mmStatus',`${total.toLocaleString()} share-months across ${MMRESULTS.length} months (monthly RSI${test.txt||' — no level set'}`+
+    `${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}; ETFs & funds excluded).`,total?'ok':'warn');
 }
 function renderMm(){
   const t=document.getElementById('mmTbl');
@@ -1605,7 +1675,9 @@ function makeStrategy(P,fixedN,title,opts){
     const picked=symsOverride||[...document.querySelectorAll('.'+P+'Pick:checked')].map(c=>c.value);
     if(!picked.length){setS(P+'SetupStatus','Tick at least one share.','warn');return;}
     const S=inst.S;
-    S.amt=+$('Amt').value||100000;
+    const amtRaw=$('Amt').value;
+    if(amtRaw===''||!(+amtRaw>0)){setS(P+'SetupStatus','Enter the amount per share first.','warn');return;}
+    S.amt=+amtRaw;
     let buyDate=S.screenDate, buyRows=inst.scr, month=opts.weekly?S.screenDate:S.screenDate.slice(0,7);
     if(!opts.weekly&&$('NextM').checked){
       const [y,m]=month.split('-').map(Number);
@@ -2042,7 +2114,9 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
   sx.start=async function(){
     if(!PICKED.length){setS('sxSetupStatus','Add at least one share.','warn');return;}
     const S=sx.S={screenDate:SCAN.date,rmin:null,mmin:null};
-    S.amt=+el('sxAmt').value||100000;
+    const sxAmtRaw=el('sxAmt').value;
+    if(sxAmtRaw===''||!(+sxAmtRaw>0)){setS('sxSetupStatus','Enter the amount per share first.','warn');return;}
+    S.amt=+sxAmtRaw;
     S.rminF=el('sxRsi').value===''?null:+el('sxRsi').value;
     S.mminF=el('sxMc').value===''?null:+el('sxMc').value;
     let buyRows=SCAN.rows, month=SCAN.date.slice(0,7), buyDate=SCAN.date;
@@ -2184,8 +2258,10 @@ async function acRun(P){
   P=P||'ac';
   const start=document.getElementById(P+'Year').value+'-'+document.getElementById(P+'Month').value;
   const topN=Math.max(2,Math.min(+document.getElementById(P+'N').value||25,100));
-  const mcMin=+document.getElementById(P+'Mc').value||0;
-  const amt=+document.getElementById(P+'Amt').value||100000;
+  const mcMin=+document.getElementById(P+'Mc').value||0;   // blank = no market-cap floor
+  const amtRaw=document.getElementById(P+'Amt').value;
+  if(amtRaw===''||!(+amtRaw>0)){setS(P+'SetupStatus','Enter the amount per share first.','warn');return;}
+  const amt=+amtRaw;
   const dates=await getScanDates();
   if(!dates||!dates.length){setS(P+'SetupStatus','Data not connected yet.','warn');return;}
   const lastMonth=dates[dates.length-1].slice(0,7);
@@ -2445,8 +2521,8 @@ async function ssRun(){
     const sd=dates&&dates.length?dates[dates.length-1]:null;
     if(!sd){setS('ssStatus','Scan index unavailable.','warn');SSRUNNING=false;return;}
     const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
-      .filter(r=>r.mcap_cr!=null&&r.mcap_cr>=mc)
-      .sort((a,b)=>b.mcap_cr-a.mcap_cr).slice(0,800).map(r=>r.symbol);
+      .filter(r=>mc?(r.mcap_cr!=null&&r.mcap_cr>=mc):true)
+      .sort((a,b)=>(b.mcap_cr??-1)-(a.mcap_cr??-1)).map(r=>r.symbol);
     let done=0;
     const scanSym=async sym=>{
       try{
@@ -2981,7 +3057,7 @@ async function mrRun(){
   const from=g('mrYear').value+'-'+g('mrMonth').value;
   const to  =g('mrYear2').value+'-'+g('mrMonth2').value;
   if(from>to){setS('mrStatus','The From month is after the To month.','warn');return;}
-  const lvl=+g('mrRsi').value||0, above=g('mrDir').value==='above';
+  const test=rsiTest('mr');
   const mv=g('mrMc').value, mmin=mv===''?null:+mv;
   // every month in the range
   const months=[]; let [y,m]=from.split('-').map(Number);
@@ -2993,16 +3069,18 @@ async function mrRun(){
     const sc=await mrScan(months[i]);
     if(!sc)continue;
     const universe=sc.rows.filter(r=>r.rsi_m!=null&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)));
-    const hit=universe.filter(r=>above?r.rsi_m>=lvl:r.rsi_m<=lvl).sort((a,b)=>above?b.rsi_m-a.rsi_m:a.rsi_m-b.rsi_m);
+    const hit=universe.filter(r=>test.f(r.rsi_m))
+      .sort((a,b)=>test.op==='le'?a.rsi_m-b.rsi_m:b.rsi_m-a.rsi_m);
     out.push({month:months[i],date:sc.date,n:hit.length,universe:universe.length,rows:hit});
   }
   if(!out.length){setS('mrStatus','No trading data in that range.','warn');
     g('mrTbl').innerHTML='';g('mrSummary').innerHTML='';g('mrDetail').innerHTML='';return;}
-  MRRES={out,lvl,above,mmin,from,to};
+  MRRES={out,txt:test.txt,op:test.op,mmin,from,to};
   mrRender(); scanSave('mr');
 }
 function mrRender(){
-  const {out,lvl,above,mmin}=MRRES;
+  const {out,mmin}=MRRES;
+  const txt=MRRES.txt||'', isLow=MRRES.op==='le';
   const counts=out.map(o=>o.n);
   const tot=counts.reduce((a,b)=>a+b,0), avg=tot/out.length;
   const peak=out.reduce((a,b)=>b.n>a.n?b:a), low=out.reduce((a,b)=>b.n<a.n?b:a);
@@ -3018,8 +3096,8 @@ function mrRender(){
   // chart
   if(mrChartObj){try{mrChartObj.destroy();}catch(e){}mrChartObj=null;}
   mrChartObj=new Chart(document.getElementById('mrChart'),{type:'bar',
-    data:{labels:out.map(o=>o.month),datasets:[{label:`Shares ${above?'≥':'≤'} RSI ${lvl}`,data:counts,
-      backgroundColor:out.map(o=>o.n===0?'#6e7681':(above?'#22d3ee':'#fbbf24')),borderRadius:3}]},
+    data:{labels:out.map(o=>o.month),datasets:[{label:`Shares with monthly RSI${txt}`,data:counts,
+      backgroundColor:out.map(o=>o.n===0?'#6e7681':(isLow?'#fbbf24':'#22d3ee')),borderRadius:3}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,
       onClick:(e,el)=>{if(el&&el.length)mrShow(el[0].index);},
       plugins:{legend:{labels:{color:'#c9d1d9'}}},
@@ -3027,7 +3105,7 @@ function mrRender(){
               y:{beginAtZero:true,ticks:{color:'#8b949e',precision:0},grid:{color:'rgba(255,255,255,.05)'}}}}});
   // month table
   document.getElementById('mrTbl').innerHTML=
-    '<thead><tr><th style="text-align:left">Month</th><th>Month end</th><th>Shares '+(above?'≥':'≤')+' '+lvl+
+    '<thead><tr><th style="text-align:left">Month</th><th>Month end</th><th>Shares'+(txt||' matching')+
     '</th><th>Screened</th><th>% of universe</th><th></th></tr></thead><tbody>'+
     out.map((o,i)=>`<tr style="cursor:pointer" onclick="mrShow(${i})">
       <td style="text-align:left"><b>${MRNAMES[+o.month.slice(5)-1]} ${o.month.slice(0,4)}</b></td>
@@ -3036,7 +3114,7 @@ function mrRender(){
       <td>${fmt0(o.universe)}</td>
       <td>${o.universe?fmt(o.n/o.universe*100):'—'}%</td>
       <td style="color:var(--muted)">view ▸</td></tr>`).join('')+'</tbody>';
-  setS('mrStatus',`${out.length} months from ${MRRES.from} to ${MRRES.to} — monthly RSI ${above?'at or above':'at or below'} ${lvl}`+
+  setS('mrStatus',`${out.length} months from ${MRRES.from} to ${MRRES.to} — monthly RSI${txt||' (no level set)'}`+
     (mmin!=null?`, mcap ≥ ₹${fmt0(mmin)} cr`:'')+`. Average ${fmt(avg,1)} shares a month.`,'ok');
   mrShow(out.length-1);
 }
@@ -3066,8 +3144,8 @@ function mrShow(i){
 function mrDownload(kind){
   try{
     if(!MRRES){setS('mrStatus','Run it first.','warn');return;}
-    const {out,lvl,above}=MRRES;
-    const sHead=['Month','Month end',`Shares ${above?'>=':'<='} RSI ${lvl}`,'Screened','% of universe'];
+    const {out}=MRRES;
+    const sHead=['Month','Month end','Shares matching'+(MRRES.txt||''),'Screened','% of universe'];
     const sRows=out.map(o=>[o.month,o.date,o.n,o.universe,o.universe?+(o.n/o.universe*100).toFixed(2):'']);
     const dHead=['Month','Month end','Symbol','Company Name','RSI (monthly)','Close','%Chg (month)','Mcap Rs cr'];
     const dRows=[];
@@ -4027,6 +4105,16 @@ function ix4Download(kind){
   ixExport(kind,head,rows,'rollover_'+IX4RES.sym,'ix4Status');
 }
 
+/* every tradable share on the newest scan day (ETFs and funds are already excluded
+   upstream). Biggest first, so progress reads sensibly. */
+async function fullUniverse(){
+  const dates=await getScanDates();
+  const sd=dates&&dates.length?dates[dates.length-1]:null;
+  if(!sd)return [];
+  return parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
+    .sort((a,b)=>(b.mcap_cr??-1)-(a.mcap_cr??-1)).map(r=>r.symbol);
+}
+
 /* ---- the same RSI+Stoch rule, run across shares in a market-cap band ---- */
 let IX5RES=null, IX5RUNNING=false;
 async function ix5Run(){
@@ -4037,19 +4125,13 @@ async function ix5Run(){
   const KL=Math.max(2,ixn('ix5Klen')||14);
   const mcMin=ixn('ix5McMin')||0, mcMaxRaw=ixn('ix5McMax')||0;
   const mcMax=mcMaxRaw>0?mcMaxRaw:Infinity;
-  const cap=Math.max(50,Math.min(ixn('ix5Uni')||800,2500));
   const from=ixv('ix5From'), to=ixv('ix5To');
   if(mcMin>0&&mcMax<mcMin){setS('ix5Status','The upper market cap is below the lower one.','warn');return;}
   IX5RUNNING=true; const res=[]; let noMcap=0, outBand=0;
   try{
     setS('ix5Status','building the universe…','');
-    const dates=await getScanDates();
-    const sd=dates&&dates.length?dates[dates.length-1]:null;
-    if(!sd){setS('ix5Status','Scan index unavailable.','warn');return;}
-    // widest possible net: any share that has ever been priced, biggest first
-    const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
-      .filter(r=>r.mcap_cr!=null)
-      .sort((a,b)=>b.mcap_cr-a.mcap_cr).slice(0,cap).map(r=>r.symbol);
+    const uni=await fullUniverse();
+    if(!uni.length){setS('ix5Status','Scan index unavailable.','warn');return;}
     let done=0;
     const scanSym=async sym=>{
       try{
@@ -4143,7 +4225,7 @@ function ix5Render(){
         y1:{position:'right',ticks:{color:'#fbbf24'},grid:{drawOnChartArea:false}}}}});
   const shown=btOpen('ix5')?res.filter(t=>t.open):res;
   ixTable('ix5Tbl',['#','Symbol','Company','Entry','Price','RSI','%K','Mcap ₹ cr','Exit','Price','RSI','%K','Months','Return'],
-    shown.slice(0,700).map((t,i)=>[i+1,`<b>${t.sym}</b>`,NAMEMAP[t.sym]||'',t.d,fmt(t.p),fmt(t.er,1),fmt(t.ek,1),
+    shown.slice(0,700).map((t,i)=>[i+1,symCell(t.sym,t.d),NAMEMAP[t.sym]||'',t.d,fmt(t.p),fmt(t.er,1),fmt(t.ek,1),
       fmt0(t.mc),t.xd+(t.open?' <span class="warn">(open)</span>':''),fmt(t.xp),fmt(t.xr,1),fmt(t.xk,1),t.bars,
       `<span class="${t.ret>=0?'pos':'neg'}">${ixPM(t.ret)}%</span>`]));
   const band=mcMax>0?`₹${fmt0(mcMin)}–${fmt0(mcMax)} cr`:`₹${fmt0(mcMin)} cr and above`;
@@ -4199,15 +4281,11 @@ async function bhScreen(){
   const rMax=+bhg('bhRsi').value, kMax=+bhg('bhStoch').value;
   const KL=Math.max(2,+bhg('bhKlen').value||14);
   const mcMin=+bhg('bhMc').value||0;
-  const cap=Math.max(50,Math.min(+bhg('bhUni').value||800,2500));
   BHBUSY=true; BHCAND=[];
   try{
     setS('bhSetupStatus','building the universe…','');
-    const dates=await getScanDates();
-    const sd=dates&&dates.length?dates[dates.length-1]:null;
-    if(!sd){setS('bhSetupStatus','Scan index unavailable.','warn');return;}
-    const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
-      .filter(r=>r.mcap_cr!=null).sort((a,b)=>b.mcap_cr-a.mcap_cr).slice(0,cap).map(r=>r.symbol);
+    const uni=await fullUniverse();
+    if(!uni.length){setS('bhSetupStatus','Scan index unavailable.','warn');return;}
     let done=0;
     const look=async sym=>{
       try{
@@ -4245,7 +4323,7 @@ function bhRenderPicks(mth,rMax,kMax,mcMin){
   t.innerHTML='<thead><tr><th></th><th style="text-align:left">Symbol</th><th>Monthly RSI</th><th>Monthly %K</th>'+
     '<th>Close</th><th>Mcap ₹ cr</th></tr></thead><tbody>'+
     BHCAND.map(c=>`<tr><td><input type="checkbox" class="bhPick" value="${c.sym}" onchange="updatePickCount('bh')"></td>`+
-      `<td style="text-align:left"><b>${c.sym}</b>${NAMEMAP[c.sym]?`<br><span style="color:var(--muted);font-size:11px">${NAMEMAP[c.sym]}</span>`:''}</td>`+
+      `<td style="text-align:left">${symCell(c.sym,c.date)}${NAMEMAP[c.sym]?`<br><span style="color:var(--muted);font-size:11px">${NAMEMAP[c.sym]}</span>`:''}</td>`+
       `<td>${fmt(c.rsi,1)}</td><td>${fmt(c.k,1)}</td><td>${fmt(c.close)}</td>`+
       `<td>${c.mc==null?'—':fmt0(c.mc)}</td></tr>`).join('')+'</tbody>';
   bhg('bhStartBtn').classList.remove('hidden');
@@ -4256,7 +4334,9 @@ function bhRenderPicks(mth,rMax,kMax,mcMin){
 async function bhRun(){
   const picked=[...document.querySelectorAll('.bhPick:checked')].map(c=>c.value);
   if(!picked.length){setS('bhSetupStatus','Tick at least one share.','warn');return;}
-  const amt=+bhg('bhAmt').value||100000;
+  const amtRaw=bhg('bhAmt').value;
+  if(amtRaw===''||!(+amtRaw>0)){setS('bhSetupStatus','Enter the amount per share first.','warn');return;}
+  const amt=+amtRaw;
   const hold=Math.max(1,+bhg('bhHold').value||12);
   const tillNow=bhg('bhTillNow').checked;
   const KL=Math.max(2,+bhg('bhKlen').value||14);
@@ -4352,7 +4432,7 @@ function bhRender(){
               y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,.05)'}}}}});
   ixTable('bhTbl',['Symbol','Company','Bought','Buy price','Units','Cost ₹','Monthly RSI','Monthly %K',
       'Mcap ₹ cr','Valued on','Price','Months','Value ₹','Return'],
-    sorted.map(r=>[`<b>${r.sym}</b>`,r.name,r.buyDate,fmt(r.buy),fmt0(r.units),fmt0(r.cost),
+    sorted.map(r=>[symCell(r.sym,r.buyDate),r.name,r.buyDate,fmt(r.buy),fmt0(r.units),fmt0(r.cost),
       fmt(r.rsi,1),fmt(r.k,1),r.mc==null?'—':fmt0(r.mc),
       r.exitDate+(r.partial?' <span class="warn">(data ends)</span>':''),fmt(r.exit),r.months,fmt0(r.value),
       `<span class="${r.ret>=0?'pos':'neg'}">${(r.ret>=0?'+':'')+fmt(r.ret)}%</span>`]));
@@ -4384,6 +4464,181 @@ function bhDownload(kind){
   ixExport(kind,head,body,'buy_and_hold_'+rows[0].buyDate,'bhHead',{name:'Monthly value',head:ch,rows:cr});
 }
 
+/* ============ Nifty-Timed Short — index times it, F&O stocks carry it ============ */
+let SNRES=null, SNBUSY=false, snCh=null;
+const sng=id=>document.getElementById(id);
+async function snRun(){
+  if(SNBUSY)return;
+  if(!MANIFEST){setS('snStatus','Not connected to data yet.','warn');return;}
+  const lvl=+sng('snRsi').value, cover=+sng('snStoch').value;
+  const N=Math.max(1,Math.min(+sng('snN').value||25,200));
+  const lowFirst=sng('snRank').value==='low';
+  const KL=Math.max(2,+sng('snKlen').value||14);
+  const amtRaw=sng('snAmt').value;
+  if(amtRaw===''||!(+amtRaw>0)){setS('snStatus','Enter the amount per stock first.','warn');return;}
+  const amt=+amtRaw, from=sng('snFrom').value, to=sng('snTo').value;
+  const mdRaw=sng('snMaxDays').value;
+  const maxDays=(mdRaw===''||!(+mdRaw>0))?null:Math.floor(+mdRaw);
+  SNBUSY=true;
+  try{
+    setS('snStatus','loading the Nifty…','');
+    let nif=await loadSeries('ix','NIFTY_50');
+    if(KL!==14){ nif=nif.map(r=>({...r})); stochCalc(nif,KL,3,3); }   // clone: never touch the cache
+    // when the index says go
+    const trig=[];
+    for(let i=1;i<nif.length;i++){
+      const a=nif[i-1].rsi14, b=nif[i].rsi14;
+      if(a==null||b==null)continue;
+      if(a<lvl&&b>=lvl&&(!from||nif[i].date>=from)&&(!to||nif[i].date<=to))trig.push(i);
+    }
+    if(!trig.length){setS('snStatus',`The Nifty daily RSI never crossed up through ${lvl} in that window.`,'warn');return;}
+    // every F&O stock's daily RSI and close, once
+    setS('snStatus',`loading ${FOLIST.length} F&O stocks…`,'');
+    const px=new Map(); let done=0;
+    const pool=8; let idx=0;
+    await Promise.all(Array.from({length:pool},async()=>{
+      while(idx<FOLIST.length){
+        const sym=FOLIST[idx++];
+        try{
+          const rows=await loadSeries('eq',sym);
+          px.set(sym,new Map(rows.map(r=>[r.date,r])));
+        }catch(e){}
+        if(++done%25===0)setS('snStatus',`loading F&O stocks… ${done}/${FOLIST.length}`,'');
+      }
+    }));
+    // walk the cycles
+    const cycles=[]; let guard=0;
+    for(const i of trig){
+      if(cycles.length&&nif[i].date<=cycles[cycles.length-1].coverDate)continue;  // still short
+      if(guard++>500)break;
+      const d0=nif[i].date;
+      // rank the F&O list by daily RSI on the trigger day
+      const cand=[];
+      FOLIST.forEach(sym=>{
+        const m=px.get(sym); if(!m)return;
+        const r=m.get(d0);
+        if(!r||r.rsi14==null||!(r.close>0))return;
+        cand.push({sym,rsi:r.rsi14,entry:r.close});
+      });
+      if(!cand.length)continue;
+      cand.sort((a,b)=>lowFirst?a.rsi-b.rsi:b.rsi-a.rsi);
+      const picks=cand.slice(0,N);
+      // cover on the first day the index Stoch drops to the level, or when time runs out
+      let ci=-1;
+      const limit=maxDays!=null?Math.min(i+maxDays,nif.length-1):nif.length-1;
+      for(let j=i+1;j<=limit;j++){
+        if(nif[j].stoch_k!=null&&nif[j].stoch_k<=cover){ci=j;break;}
+      }
+      let why='Stoch';
+      if(ci<0&&maxDays!=null&&limit<nif.length-1){ ci=limit; why='Time limit'; }
+      const open=ci<0;
+      if(open)why='Open';
+      const cIdx=open?nif.length-1:ci;
+      const coverDate=nif[cIdx].date;
+      let pnl=0, invested=0; const legs=[];
+      picks.forEach(p=>{
+        const m=px.get(p.sym);
+        // last close on or before the cover date
+        let ex=null;
+        const r=m.get(coverDate);
+        if(r&&r.close>0)ex=r.close;
+        else{ for(let k=cIdx;k>=i&&ex==null;k--){const q=m.get(nif[k].date); if(q&&q.close>0)ex=q.close;} }
+        if(ex==null)return;
+        const units=Math.floor(amt/p.entry);
+        if(!units)return;
+        const rup=units*(p.entry-ex);
+        pnl+=rup; invested+=units*p.entry;
+        legs.push({sym:p.sym,rsi:p.rsi,entry:p.entry,exit:ex,units,rup,
+          ret:(p.entry-ex)/p.entry*100});
+      });
+      if(!legs.length)continue;
+      cycles.push({d0,rsi0:nif[i].rsi14,coverDate,k1:nif[cIdx].stoch_k,why,
+        days:cIdx-i,open,legs,pnl,invested,ret:invested?pnl/invested*100:0});
+    }
+    if(!cycles.length){setS('snStatus','No basket could be priced in that window.','warn');return;}
+    SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL};
+    snRender(); scanSave('sn');
+  }finally{ SNBUSY=false; }
+}
+function snRender(){
+  if(!SNRES)return;
+  const {cycles,lvl,cover,N,lowFirst}=SNRES;
+  const maxDays=SNRES.maxDays??null;
+  const shown=btOpen('sn')?cycles.filter(c=>c.open):cycles;
+  const closed=cycles.filter(c=>!c.open);
+  const wins=closed.filter(c=>c.pnl>0).length;
+  const tot=cycles.reduce((s,c)=>s+c.pnl,0);
+  const best=cycles.reduce((a,b)=>b.ret>a.ret?b:a), worst=cycles.reduce((a,b)=>b.ret<a.ret?b:a);
+  const avgD=cycles.reduce((s,c)=>s+c.days,0)/cycles.length;
+  const box=(l,v,c)=>`<div><label>${l}</label><div style="font-size:16px;font-weight:700" class="${c||''}">${v}</div></div>`;
+  sng('snSummary').innerHTML=
+    box('Baskets shorted',cycles.length)+
+    box('Win rate',closed.length?(wins/closed.length*100).toFixed(1)+'%':'—',wins/Math.max(1,closed.length)>=.5?'pos':'neg')+
+    box('Net P&L',ixPM0(tot),tot>=0?'pos':'neg')+
+    box('Best basket',ixPM(best.ret)+'%','pos')+
+    box('Worst basket',ixPM(worst.ret)+'%','neg')+
+    box('Avg days held',fmt(avgD,1))+
+    box('Still open',cycles.filter(c=>c.open).length)+
+    box('Timed out',cycles.filter(c=>c.why==='Time limit').length,'warn')+
+    box('Stocks per basket',N)+
+    box('Ranked',lowFirst?'weakest RSI':'strongest RSI');
+  // cumulative P&L
+  if(snCh){try{snCh.destroy();}catch(e){}snCh=null;}
+  let run=0; const cum=cycles.map(c=>{run+=c.pnl;return Math.round(run);});
+  snCh=new Chart(sng('snChart'),{type:'line',
+    data:{labels:cycles.map(c=>c.d0),datasets:[{label:'Cumulative short P&L (₹)',data:cum,
+      borderColor:tot>=0?'#3fb950':'#f85149',backgroundColor:tot>=0?'rgba(63,185,80,.12)':'rgba(248,81,73,.12)',
+      fill:true,borderWidth:2.4,pointRadius:2,tension:.2}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,
+      onClick:(e,el)=>{if(el&&el.length)snShow(el[0].index);},
+      plugins:{legend:{labels:{color:'#c9d1d9'}}},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'rgba(255,255,255,.05)'}},
+              y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+  ixTable('snTbl',['#','Shorted on','Nifty RSI','Covered on','Why','Nifty %K','Days','Stocks','Shorted ₹','P&L ₹','Return',''],
+    shown.map(c=>{
+      const i=cycles.indexOf(c);
+      const why=c.why||(c.open?'Open':'Stoch');
+      return [i+1,c.d0,fmt(c.rsi0,1),c.coverDate+(c.open?' <span class="warn">(open)</span>':''),
+        why==='Time limit'?'<span class="warn">Time limit</span>':(why==='Open'?'<span class="warn">Open</span>':'Stoch'),
+        fmt(c.k1,1),c.days,c.legs.length,fmt0(c.invested),
+        `<span class="${c.pnl>=0?'pos':'neg'}">${ixPM0(c.pnl)}</span>`,
+        `<span class="${c.ret>=0?'pos':'neg'}">${ixPM(c.ret)}%</span>`,
+        `<span style="color:var(--muted);cursor:pointer" onclick="snShow(${i})">view ▸</span>`];
+    }));
+  setS('snStatus',`${cycles.length} basket(s): Nifty daily RSI crossed up through ${lvl}, shorted the ${N} ${lowFirst?'weakest':'strongest'} F&O stocks by daily RSI, covered when Nifty daily %K (length ${SNRES.KL??14}) reached ${cover}`+
+    (maxDays!=null?`, or after ${maxDays} trading days, whichever came first`:'')+
+    `. Net ${ixPM0(tot)}.`+btNote('sn',cycles.filter(c=>c.open).length,cycles.length)+
+    ' F&O membership is the current list, so a stock may not have been in F&O at the time.',tot>=0?'ok':'warn');
+  snShow(cycles.length-1);
+}
+function snShow(i){
+  const c=SNRES&&SNRES.cycles[i]; if(!c)return;
+  const legs=[...c.legs].sort((a,b)=>b.ret-a.ret);
+  sng('snDetail').innerHTML=`<div class="subcard">
+    <div class="section-head">Shorted ${c.d0} · covered ${c.coverDate}${c.open?' (still open)':''} — ${legs.length} stocks</div>
+    <div class="tblwrap" style="max-height:400px"><table>
+      <thead><tr><th>#</th><th style="text-align:left">Symbol</th><th>Daily RSI at entry</th><th>Short price</th>
+        <th>Cover price</th><th>Units</th><th>P&L ₹</th><th>Return</th></tr></thead>
+      <tbody>${legs.map((l,j)=>`<tr><td>${j+1}</td>
+        <td style="text-align:left">${symCell(l.sym,c.d0)}${NAMEMAP[l.sym]?`<br><span style="color:var(--muted);font-size:11px">${NAMEMAP[l.sym]}</span>`:''}</td>
+        <td>${fmt(l.rsi,1)}</td><td>${fmt(l.entry)}</td><td>${fmt(l.exit)}</td><td>${fmt0(l.units)}</td>
+        <td class="${l.rup>=0?'pos':'neg'}">${ixPM0(l.rup)}</td>
+        <td class="${l.ret>=0?'pos':'neg'}">${ixPM(l.ret)}%</td></tr>`).join('')}</tbody>
+    </table></div></div>`;
+}
+function snDownload(kind){
+  if(!SNRES)return setS('snStatus','Run the back-test first.','warn');
+  const {cycles}=SNRES;
+  const head=['#','Shorted on','Nifty RSI','Covered on','Why','Nifty %K','Days','Stocks','Shorted Rs','P&L Rs','Return %','Open'];
+  const rows=cycles.map((c,i)=>[i+1,c.d0,+c.rsi0.toFixed(2),c.coverDate,c.why||'',c.k1==null?'':+c.k1.toFixed(2),
+    c.days,c.legs.length,Math.round(c.invested),Math.round(c.pnl),+c.ret.toFixed(2),c.open?'yes':'']);
+  const lh=['Shorted on','Symbol','Company','Daily RSI at entry','Short price','Cover price','Units','P&L Rs','Return %'];
+  const lr=[];
+  cycles.forEach(c=>c.legs.forEach(l=>lr.push([c.d0,l.sym,NAMEMAP[l.sym]||'',+l.rsi.toFixed(2),
+    +l.entry.toFixed(2),+l.exit.toFixed(2),l.units,Math.round(l.rup),+l.ret.toFixed(2)])));
+  ixExport(kind,head,rows,'nifty_timed_short','snStatus',{name:'Every short',head:lh,rows:lr});
+}
+
 /* ============ scans survive a reload (kept on this device) ============ */
 function scanInputs(ids){const o={};ids.forEach(i=>{const e=document.getElementById(i);
   if(e)o[i]=(e.type==='checkbox')?e.checked:e.value;});return o;}
@@ -4400,18 +4655,23 @@ const SCANS={
       get:()=>({res:SHRES}),
       put:d=>{SHRES=d.res||[];if(SHRES.length)shRender();},
       trims:[d=>({res:(d.res||[]).slice(0,1500)}),d=>({res:(d.res||[]).slice(0,400)})]},
-  ix5:{ids:['ix5RsiB','ix5StB','ix5RsiS','ix5StS','ix5Join','ix5Xjoin','ix5Klen','ix5McMin','ix5McMax','ix5Uni','ix5From','ix5To','ix5OpenOnly'],
+  ix5:{ids:['ix5RsiB','ix5StB','ix5RsiS','ix5StS','ix5Join','ix5Xjoin','ix5Klen','ix5McMin','ix5McMax','ix5From','ix5To','ix5OpenOnly'],
       status:'ix5Status',
       get:()=>({r:IX5RES}),
       put:d=>{IX5RES=d.r||null;if(IX5RES)ix5Render();},
       trims:[d=>d.r?{r:Object.assign({},d.r,{res:d.r.res.slice(0,1500)})}:d,
               d=>d.r?{r:Object.assign({},d.r,{res:d.r.res.slice(0,400)})}:d]},
-  bh:{ids:['bhMonth','bhYear','bhRsi','bhStoch','bhKlen','bhMc','bhUni','bhAmt','bhHold','bhTillNow'],
+  bh:{ids:['bhMonth','bhYear','bhRsi','bhStoch','bhKlen','bhMc','bhAmt','bhHold','bhTillNow'],
       status:'bhHead',
       get:()=>({r:BHRES,cand:BHCAND}),
       put:d=>{BHRES=d.r||null;BHCAND=d.cand||[];if(BHRES)bhRender();},
       trims:[d=>({r:d.r,cand:[]})]},
-  mr:{ids:['mrMonth','mrYear','mrMonth2','mrYear2','mrDir','mrRsi','mrMc'],status:'mrStatus',
+  sn:{ids:['snRsi','snStoch','snKlen','snMaxDays','snN','snRank','snAmt','snFrom','snTo','snOpenOnly'],status:'snStatus',
+      get:()=>({r:SNRES}),
+      put:d=>{SNRES=d.r||null;if(SNRES)snRender();},
+      trims:[d=>d.r?{r:Object.assign({},d.r,{cycles:d.r.cycles.map(c=>Object.assign({},c,{legs:c.legs.slice(0,10)}))})}:d,
+             d=>d.r?{r:Object.assign({},d.r,{cycles:d.r.cycles.map(c=>Object.assign({},c,{legs:[]}))})}:d]},
+  mr:{ids:['mrMonth','mrYear','mrMonth2','mrYear2','mrRsiOp','mrRsiMin','mrRsiMax','mrMc'],status:'mrStatus',
       get:()=>({r:MRRES}),
       put:d=>{MRRES=d.r||null;if(MRRES)mrRender();},
       trims:[d=>d.r?{r:Object.assign({},d.r,{out:d.r.out.map(o=>Object.assign({},o,{rows:o.rows.slice(0,25)}))})}:d,
@@ -4451,7 +4711,8 @@ function scanClear(k){ try{localStorage.removeItem('scan_'+k);}catch(e){} }
   const to=new Date().toISOString().slice(0,10);
   const from=new Date(); from.setFullYear(from.getFullYear()-5);
   ['ix1From','ix2From','ix3From','ix4From'].forEach(i=>{const e=ixg(i);if(e)e.value=from.toISOString().slice(0,10);});
-  ['ix1To','ix2To','ix3To','ix4To','ix5To'].forEach(i=>{const e=ixg(i);if(e)e.value=to;});
+  ['ix1To','ix2To','ix3To','ix4To','ix5To','snTo'].forEach(i=>{const e=ixg(i);if(e)e.value=to;});
+  const e6=ixg('snFrom'); if(e6)e6.value=long.toISOString().slice(0,10);
   const long=new Date(); long.setFullYear(long.getFullYear()-15);
   const e5=ixg('ix5From'); if(e5)e5.value=long.toISOString().slice(0,10);
   ['ix2','ix3'].forEach(P=>{
@@ -4476,9 +4737,35 @@ function ssTfLabels(){
 }
 function dlTfLabels(){
   const e=document.getElementById('dlTf'); if(!e)return;
-  const w=TFWORD[e.value]||'';
-  setLbl('dlL1',w+' RSI min'); setLbl('dlL2',w+' RSI max');
+  setLbl('dlL0',(TFWORD[e.value]||'')+' RSI');
+  dlRsiOp();
 }
+/* RSI condition box, shared by every tab that screens on RSI.
+   <p>RsiOp select + <p>RsiMin + <p>RsiMaxBox/<p>RsiMax, labels <p>L1 / <p>L2 */
+function rsiOpUI(p){
+  const op=(document.getElementById(p+'RsiOp')||{}).value||'ge';
+  const box=document.getElementById(p+'RsiMaxBox');
+  if(box)box.classList.toggle('hidden',op!=='bt');
+  setLbl(p+'L1',op==='bt'?'From':'Level');
+  setLbl(p+'L2','to');
+}
+function rsiTest(p){                 // -> {f:value=>bool, txt:' at or above 80', op}
+  const g=id=>{const e=document.getElementById(id);return e&&e.value!==''?+e.value:null;};
+  const op=(document.getElementById(p+'RsiOp')||{}).value||'ge';
+  let a=g(p+'RsiMin'), b=g(p+'RsiMax');
+  if(op==='bt'&&a!=null&&b!=null&&a>b){const t=a;a=b;b=t;}
+  const R=(f,txt)=>({f,txt,op});
+  if(op==='ge')return a==null?R(()=>true,''):R(v=>v>=a,` at or above ${a}`);
+  if(op==='le')return a==null?R(()=>true,''):R(v=>v<=a,` at or below ${a}`);
+  if(a!=null&&b!=null)return R(v=>v>=a&&v<=b,` between ${a} and ${b}`);
+  if(a!=null)return R(v=>v>=a,` at or above ${a}`);
+  if(b!=null)return R(v=>v<=b,` at or below ${b}`);
+  return R(()=>true,'');
+}
+function dlRsiOp(){ rsiOpUI('dl'); }
+function dlRsiTest(){ return rsiTest('dl'); }
+function mmRsiOp(){ rsiOpUI('mm'); }
+function mrRsiOp(){ rsiOpUI('mr'); }
 function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();}
 function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;e.className='status '+(cls||'');}
 (function(){
@@ -4510,7 +4797,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
     ays.value=2020;
   });
 })();
-try{ssTfLabels();dlTfLabels();}catch(e){}
+try{ssTfLabels();dlTfLabels();rsiOpUI('mm');rsiOpUI('mr');}catch(e){}
 init();
 </script>
 </body>
