@@ -4729,9 +4729,10 @@ function scanClear(k){ try{localStorage.removeItem('scan_'+k);}catch(e){} }
   const from=new Date(); from.setFullYear(from.getFullYear()-5);
   ['ix1From','ix2From','ix3From','ix4From'].forEach(i=>{const e=ixg(i);if(e)e.value=from.toISOString().slice(0,10);});
   ['ix1To','ix2To','ix3To','ix4To','ix5To','snTo'].forEach(i=>{const e=ixg(i);if(e)e.value=to;});
-  const e6=ixg('snFrom'); if(e6)e6.value=long.toISOString().slice(0,10);
   const long=new Date(); long.setFullYear(long.getFullYear()-15);
-  const e5=ixg('ix5From'); if(e5)e5.value=long.toISOString().slice(0,10);
+  const longIso=long.toISOString().slice(0,10);
+  const e5=ixg('ix5From'); if(e5)e5.value=longIso;
+  const e6=ixg('snFrom'); if(e6)e6.value=longIso;
   ['ix2','ix3'].forEach(P=>{
     const s=ixg(P+'Sym'); if(!s)return;
     s.addEventListener('change',()=>{const d=ixDef(s.value);const st=ixg(P+'Step');if(st)st.value=d.step;});
