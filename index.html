@@ -589,7 +589,9 @@ a{color:var(--accent);}
     <div><label>Daily %K length</label><input type="number" id="snKlen" style="width:110px" value="14" min="2"></div>
     <div><label>or cover after at most (trading days)</label><input type="number" id="snMaxDays" style="width:130px" placeholder="blank = no limit" min="1"></div>
     <div><label>Stocks per trade</label><input type="number" id="snN" style="width:100px" value="25" min="1" max="200"></div>
-    <div><label>Rank F&amp;O stocks by Daily RSI</label>
+    <div><label>Rank F&amp;O stocks on</label>
+      <select id="snStockTf"><option value="D" selected>Daily RSI</option><option value="W">Weekly RSI</option><option value="M">Monthly RSI</option></select></div>
+    <div><label>Take the</label>
       <select id="snRank"><option value="low" selected>lowest first</option><option value="high">highest first</option></select></div>
     <div><label>Amount per stock (₹)</label><input type="number" id="snAmt" style="width:130px" placeholder="e.g. 100000"></div>
     <div><label>From</label><input type="date" id="snFrom"></div>
@@ -4465,7 +4467,7 @@ function bhDownload(kind){
 }
 
 /* ============ Nifty-Timed Short — index times it, F&O stocks carry it ============ */
-let SNRES=null, SNBUSY=false, snCh=null;
+let SNRES=null, SNBUSY=false, snCh=null, SNSCAN=new Map();
 const sng=id=>document.getElementById(id);
 async function snRun(){
   if(SNBUSY)return;
@@ -4474,6 +4476,8 @@ async function snRun(){
   const N=Math.max(1,Math.min(+sng('snN').value||25,200));
   const lowFirst=sng('snRank').value==='low';
   const KL=Math.max(2,+sng('snKlen').value||14);
+  const stf=sng('snStockTf').value;
+  const rsiKey=stf==='D'?'rsi_d':stf==='W'?'rsi_w':'rsi_m';
   const amtRaw=sng('snAmt').value;
   if(amtRaw===''||!(+amtRaw>0)){setS('snStatus','Enter the amount per stock first.','warn');return;}
   const amt=+amtRaw, from=sng('snFrom').value, to=sng('snTo').value;
@@ -4507,18 +4511,30 @@ async function snRun(){
       }
     }));
     // walk the cycles
+    const sdates=(await getScanDates())||[];
+    if(!sdates.length){setS('snStatus','Scan index unavailable.','warn');return;}
     const cycles=[]; let guard=0;
     for(const i of trig){
       if(cycles.length&&nif[i].date<=cycles[cycles.length-1].coverDate)continue;  // still short
       if(guard++>500)break;
       const d0=nif[i].date;
-      // rank the F&O list by daily RSI on the trigger day
+      // the scan file already holds daily / weekly / monthly RSI as it stood that day
+      const sd=sdates.filter(x=>x<=d0).pop();
+      if(!sd)continue;
+      let rsiMap=SNSCAN.get(sd);
+      if(!rsiMap){
+        try{
+          const sc=await loadScanByDate(sd);
+          rsiMap=new Map(sc.rows.map(r=>[r.symbol,r]));
+          SNSCAN.set(sd,rsiMap);
+        }catch(e){ continue; }
+      }
       const cand=[];
       FOLIST.forEach(sym=>{
         const m=px.get(sym); if(!m)return;
-        const r=m.get(d0);
-        if(!r||r.rsi14==null||!(r.close>0))return;
-        cand.push({sym,rsi:r.rsi14,entry:r.close});
+        const r=m.get(d0), sr=rsiMap.get(sym);
+        if(!r||!(r.close>0)||!sr||sr[rsiKey]==null)return;
+        cand.push({sym,rsi:sr[rsiKey],entry:r.close});
       });
       if(!cand.length)continue;
       cand.sort((a,b)=>lowFirst?a.rsi-b.rsi:b.rsi-a.rsi);
@@ -4556,7 +4572,7 @@ async function snRun(){
         days:cIdx-i,open,legs,pnl,invested,ret:invested?pnl/invested*100:0});
     }
     if(!cycles.length){setS('snStatus','No basket could be priced in that window.','warn');return;}
-    SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL};
+    SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL,stf};
     snRender(); scanSave('sn');
   }finally{ SNBUSY=false; }
 }
@@ -4564,6 +4580,7 @@ function snRender(){
   if(!SNRES)return;
   const {cycles,lvl,cover,N,lowFirst}=SNRES;
   const maxDays=SNRES.maxDays??null;
+  const tfW=TFWORD[SNRES.stf||'D']||'Daily';
   const shown=btOpen('sn')?cycles.filter(c=>c.open):cycles;
   const closed=cycles.filter(c=>!c.open);
   const wins=closed.filter(c=>c.pnl>0).length;
@@ -4581,7 +4598,7 @@ function snRender(){
     box('Still open',cycles.filter(c=>c.open).length)+
     box('Timed out',cycles.filter(c=>c.why==='Time limit').length,'warn')+
     box('Stocks per basket',N)+
-    box('Ranked',lowFirst?'weakest RSI':'strongest RSI');
+    box('Ranked',(lowFirst?'weakest ':'strongest ')+tfW+' RSI');
   // cumulative P&L
   if(snCh){try{snCh.destroy();}catch(e){}snCh=null;}
   let run=0; const cum=cycles.map(c=>{run+=c.pnl;return Math.round(run);});
@@ -4605,7 +4622,7 @@ function snRender(){
         `<span class="${c.ret>=0?'pos':'neg'}">${ixPM(c.ret)}%</span>`,
         `<span style="color:var(--muted);cursor:pointer" onclick="snShow(${i})">view ▸</span>`];
     }));
-  setS('snStatus',`${cycles.length} basket(s): Nifty daily RSI crossed up through ${lvl}, shorted the ${N} ${lowFirst?'weakest':'strongest'} F&O stocks by daily RSI, covered when Nifty daily %K (length ${SNRES.KL??14}) reached ${cover}`+
+  setS('snStatus',`${cycles.length} basket(s): Nifty daily RSI crossed up through ${lvl}, shorted the ${N} ${lowFirst?'weakest':'strongest'} F&O stocks by ${tfW.toLowerCase()} RSI, covered when Nifty daily %K (length ${SNRES.KL??14}) reached ${cover}`+
     (maxDays!=null?`, or after ${maxDays} trading days, whichever came first`:'')+
     `. Net ${ixPM0(tot)}.`+btNote('sn',cycles.filter(c=>c.open).length,cycles.length)+
     ' F&O membership is the current list, so a stock may not have been in F&O at the time.',tot>=0?'ok':'warn');
@@ -4617,7 +4634,7 @@ function snShow(i){
   sng('snDetail').innerHTML=`<div class="subcard">
     <div class="section-head">Shorted ${c.d0} · covered ${c.coverDate}${c.open?' (still open)':''} — ${legs.length} stocks</div>
     <div class="tblwrap" style="max-height:400px"><table>
-      <thead><tr><th>#</th><th style="text-align:left">Symbol</th><th>Daily RSI at entry</th><th>Short price</th>
+      <thead><tr><th>#</th><th style="text-align:left">Symbol</th><th>${TFWORD[SNRES.stf||'D']} RSI at entry</th><th>Short price</th>
         <th>Cover price</th><th>Units</th><th>P&L ₹</th><th>Return</th></tr></thead>
       <tbody>${legs.map((l,j)=>`<tr><td>${j+1}</td>
         <td style="text-align:left">${symCell(l.sym,c.d0)}${NAMEMAP[l.sym]?`<br><span style="color:var(--muted);font-size:11px">${NAMEMAP[l.sym]}</span>`:''}</td>
@@ -4632,7 +4649,7 @@ function snDownload(kind){
   const head=['#','Shorted on','Nifty RSI','Covered on','Why','Nifty %K','Days','Stocks','Shorted Rs','P&L Rs','Return %','Open'];
   const rows=cycles.map((c,i)=>[i+1,c.d0,+c.rsi0.toFixed(2),c.coverDate,c.why||'',c.k1==null?'':+c.k1.toFixed(2),
     c.days,c.legs.length,Math.round(c.invested),Math.round(c.pnl),+c.ret.toFixed(2),c.open?'yes':'']);
-  const lh=['Shorted on','Symbol','Company','Daily RSI at entry','Short price','Cover price','Units','P&L Rs','Return %'];
+  const lh=['Shorted on','Symbol','Company',(TFWORD[SNRES.stf||'D'])+' RSI at entry','Short price','Cover price','Units','P&L Rs','Return %'];
   const lr=[];
   cycles.forEach(c=>c.legs.forEach(l=>lr.push([c.d0,l.sym,NAMEMAP[l.sym]||'',+l.rsi.toFixed(2),
     +l.entry.toFixed(2),+l.exit.toFixed(2),l.units,Math.round(l.rup),+l.ret.toFixed(2)])));
@@ -4666,7 +4683,7 @@ const SCANS={
       get:()=>({r:BHRES,cand:BHCAND}),
       put:d=>{BHRES=d.r||null;BHCAND=d.cand||[];if(BHRES)bhRender();},
       trims:[d=>({r:d.r,cand:[]})]},
-  sn:{ids:['snRsi','snStoch','snKlen','snMaxDays','snN','snRank','snAmt','snFrom','snTo','snOpenOnly'],status:'snStatus',
+  sn:{ids:['snRsi','snStoch','snKlen','snMaxDays','snN','snStockTf','snRank','snAmt','snFrom','snTo','snOpenOnly'],status:'snStatus',
       get:()=>({r:SNRES}),
       put:d=>{SNRES=d.r||null;if(SNRES)snRender();},
       trims:[d=>d.r?{r:Object.assign({},d.r,{cycles:d.r.cycles.map(c=>Object.assign({},c,{legs:c.legs.slice(0,10)}))})}:d,
