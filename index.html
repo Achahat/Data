@@ -203,6 +203,8 @@ a{color:var(--accent);}
       <div>
         <button id="stNextBtn" onclick="STRATS.st.advance()">Next month ▶</button>
         <button class="ghost" id="stRunAllBtn" onclick="STRATS.st.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="stRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.st.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.st.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('st')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.st.reset()">↺ New strategy</button>
@@ -257,6 +259,8 @@ a{color:var(--accent);}
       <div>
         <button id="mcNextBtn" onclick="STRATS.mc.advance()">Next month ▶</button>
         <button class="ghost" id="mcRunAllBtn" onclick="STRATS.mc.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="mcRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.mc.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.mc.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('mc')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.mc.reset()">↺ New strategy</button>
@@ -299,7 +303,10 @@ a{color:var(--accent);}
           <option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select></div>
       <div><label>Start year</label><select id="acYear"></select></div>
-      <div><label>Top N by Monthly RSI</label><input type="number" id="acN" style="width:80px" value="25"></div>
+      <div><label>End month (blank = today)</label>
+      <select id="acEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+    <div><label>End year</label><select id="acEndYear"><option value="">—</option></select></div>
+    <div><label>Top N by Monthly RSI</label><input type="number" id="acN" style="width:80px" value="25"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="acMc" style="width:110px" placeholder="e.g. 5000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="acAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun()">Run till today ▶</button>
@@ -377,6 +384,8 @@ a{color:var(--accent);}
       <div>
         <button id="sxNextBtn" onclick="STRATS.sx.advance()">Next month ▶</button>
         <button class="ghost" id="sxRunAllBtn" onclick="STRATS.sx.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="sxRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.sx.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.sx.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('sx')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.sx.reset()">↺ New strategy</button>
@@ -646,6 +655,8 @@ a{color:var(--accent);}
       <div>
         <button id="wkNextBtn" onclick="STRATS.wk.advance()">Next week ▶</button>
         <button class="ghost" id="wkRunAllBtn" onclick="STRATS.wk.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="wkRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.wk.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.wk.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('wk')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.wk.reset()">↺ New strategy</button>
@@ -696,6 +707,8 @@ a{color:var(--accent);}
       <div>
         <button id="twNextBtn" onclick="STRATS.tw.advance()">Next week ▶</button>
         <button class="ghost" id="twRunAllBtn" onclick="STRATS.tw.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="twRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.tw.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.tw.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('tw')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.tw.reset()">↺ New strategy</button>
@@ -848,7 +861,10 @@ a{color:var(--accent);}
           <option value="10">October</option><option value="11">November</option><option value="12">December</option>
         </select></div>
       <div><label>Start year</label><select id="taYear"></select></div>
-      <div><label>Top N by Monthly RSI</label><input type="number" id="taN" style="width:80px" value="25"></div>
+      <div><label>End month (blank = today)</label>
+      <select id="taEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+    <div><label>End year</label><select id="taEndYear"><option value="">—</option></select></div>
+    <div><label>Top N by Monthly RSI</label><input type="number" id="taN" style="width:80px" value="25"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="taMc" style="width:110px" placeholder="e.g. 5000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="taAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun('ta')">Run till today ▶</button>
@@ -910,6 +926,8 @@ a{color:var(--accent);}
       <div>
         <button id="t1NextBtn" onclick="STRATS.t1.advance()">Next month ▶</button>
         <button class="ghost" id="t1RunAllBtn" onclick="STRATS.t1.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="t1RunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.t1.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.t1.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('t1')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.t1.reset()">↺ New strategy</button>
@@ -962,6 +980,8 @@ a{color:var(--accent);}
       <div>
         <button id="t3NextBtn" onclick="STRATS.t3.advance()">Next month ▶</button>
         <button class="ghost" id="t3RunAllBtn" onclick="STRATS.t3.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="t3RunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.t3.runTill()">⏩ Run till date</button>
         <button class="ghost" onclick="STRATS.t3.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('t3')">💾 Save run</button>
         <button class="ghost" onclick="STRATS.t3.reset()">↺ New strategy</button>
@@ -1012,6 +1032,7 @@ a{color:var(--accent);}
       <button class="ghost mini" onclick="preset(99)">Max</button>
     </div>
     <div class="row" style="margin:0"><label style="margin-right:4px">Log</label><input type="checkbox" id="logScale" onchange="drawChart()"></div>
+    <div class="row" style="margin:0"><label style="margin-right:4px">Supertrend (10,3)</label><input type="checkbox" id="showST" checked onchange="drawChart()"></div>
   </div>
   <div class="status" id="cStatus">Pick a stock or index to begin.</div>
   <div class="chartbox" id="chartArea" style="display:none">
@@ -1121,6 +1142,16 @@ async function fetchGz(relPath){
   if(!r.ok) throw new Error(relPath+' → '+r.status);
   return await gunzipToText(r.body);
 }
+/* Files are named with & / * stripped out (J&KBANK -> JandKBANK), and the screening
+   files took their symbol from the FILENAME — so those rows carry the mangled ticker.
+   Map it back, otherwise the company name never resolves and any cross-reference
+   against a real symbol list (F&O, watchlist) silently drops the share. */
+let SAFE2REAL={};
+function parseScan(text){
+  const rows=parseCSV(text);
+  for(const r of rows){ const real=SAFE2REAL[r.symbol]; if(real)r.symbol=real; }
+  return rows;
+}
 function parseCSV(text){
   const lines=text.split('\n').filter(l=>l.trim());
   const head=lines[0].split(',').map(h=>h.trim());
@@ -1128,7 +1159,8 @@ function parseCSV(text){
     const c=l.split(',').map(v=>v.trim()); const o={};
     head.forEach((h,i)=>o[h]=c[i]);
     ['open','high','low','close','vol','rsi14','mcap_cr','rsi_d','rsi_w','rsi_m','chg_d','chg_w','chg_m','o_d','o_w','o_m','stoch_k','stoch_d',
-     'settle','oi','lot','dte','next_close','far_close','spot','basis','basis_pct','roll','roll_pct','roll_ann'].forEach(k=>{if(k in o)o[k]=o[k]===''?null:+o[k];});
+     'settle','oi','lot','dte','next_close','far_close','spot','basis','basis_pct','roll','roll_pct','roll_ann',
+     'st','st_dir','st_d','st_w','st_m'].forEach(k=>{if(k in o)o[k]=o[k]===''?null:+o[k];});
     return o;
   });
 }
@@ -1244,7 +1276,8 @@ function afterLoad(){
   document.getElementById('liveDot').className='dot live';
   document.getElementById('liveText').textContent='Live Data';
   document.getElementById('localBtn').classList.add('hidden');
-  LOOKUP=[]; NAMEMAP={}; RENAMES={};
+  LOOKUP=[]; NAMEMAP={}; RENAMES={}; SAFE2REAL={};
+  MANIFEST.equities.forEach(e=>{const sn=safeName(e.symbol); if(sn!==e.symbol)SAFE2REAL[sn]=e.symbol;});
   (MANIFEST.renames||[]).forEach(r=>{(RENAMES[r.new]=RENAMES[r.new]||[]).push(r);});
   Object.keys(RENAMES).forEach(k=>RENAMES[k].sort((a,b)=>b.eff.localeCompare(a.eff)));
   MANIFEST.equities.forEach(e=>{
@@ -1326,6 +1359,32 @@ function weekEnd(ds){ // date string -> Friday-of-week string
   d.setUTCDate(d.getUTCDate()+((5-dow+7)%7));
   return d.toISOString().slice(0,10);
 }
+function superCalc(rows,period=10,mult=3){   // TradingView convention, +1 up / -1 down
+  const n=rows.length;
+  if(n<period+1){rows.forEach(r=>{r.st=null;r.st_dir=null;});return;}
+  const H=rows.map(r=>r.high??r.close), L=rows.map(r=>r.low??r.close), C=rows.map(r=>r.close);
+  const tr=new Array(n), atr=new Array(n).fill(null);
+  tr[0]=H[0]-L[0];
+  for(let i=1;i<n;i++)tr[i]=Math.max(H[i]-L[i],Math.abs(H[i]-C[i-1]),Math.abs(L[i]-C[i-1]));
+  let sum=0; for(let i=0;i<period;i++)sum+=tr[i];
+  atr[period-1]=sum/period;
+  for(let i=period;i<n;i++)atr[i]=(atr[i-1]*(period-1)+tr[i])/period;
+  const fub=new Array(n).fill(null), flb=new Array(n).fill(null);
+  const s0=period-1, hl2=i=>(H[i]+L[i])/2;
+  fub[s0]=hl2(s0)+mult*atr[s0]; flb[s0]=hl2(s0)-mult*atr[s0];
+  for(let i=s0+1;i<n;i++){
+    const ub=hl2(i)+mult*atr[i], lb=hl2(i)-mult*atr[i];
+    flb[i]=(lb>flb[i-1]||C[i-1]<flb[i-1])?lb:flb[i-1];
+    fub[i]=(ub<fub[i-1]||C[i-1]>fub[i-1])?ub:fub[i-1];
+  }
+  const st=new Array(n).fill(null), dir=new Array(n).fill(null);
+  dir[s0]=C[s0]>=fub[s0]?1:-1; st[s0]=dir[s0]===1?flb[s0]:fub[s0];
+  for(let i=s0+1;i<n;i++){
+    dir[i]=(st[i-1]===fub[i-1]) ? (C[i]>fub[i]?1:-1) : (C[i]<flb[i]?-1:1);
+    st[i]=dir[i]===1?flb[i]:fub[i];
+  }
+  rows.forEach((r,i)=>{r.st=st[i]==null?null:+st[i].toFixed(4); r.st_dir=dir[i];});
+}
 function resample(rows,tf){
   if(tf==='D')return rows;
   const key=tf==='W'?r=>weekEnd(r.date):r=>r.date.slice(0,7);
@@ -1340,6 +1399,7 @@ function resample(rows,tf){
   const rsi=rsiCalc(out.map(r=>r.close));
   out.forEach((r,i)=>r.rsi14=rsi[i]);
   stochCalc(out);
+  superCalc(out);
   return out;
 }
 function inRange(rows,f,t){return rows.filter(r=>(!f||r.date>=f)&&(!t||r.date<=t));}
@@ -1408,7 +1468,7 @@ async function findShares(){
   }
   if(!sd){setS('dlStatus','No trading day found at or before that date.','warn');return;}
   SCANDATE=sd;
-  const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
+  const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
   const tf=document.getElementById('dlTf').value;
   const key=tf==='D'?'rsi_d':tf==='W'?'rsi_w':'rsi_m';
   const test=dlRsiTest();
@@ -1520,7 +1580,7 @@ async function mmFind(){
     if(!sd) continue;   // month outside data
     setS('mmStatus',`screening ${mth}… (${done}/${months.length})`,'');
     try{
-      const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
+      const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
       const hits=rows.filter(r=>{
         if(r.rsi_m==null)return false;
         if(!test.f(r.rsi_m))return false;
@@ -1579,7 +1639,7 @@ function mmDownload(kind){
 
 /* ============ strategy engines (steps 3 & 4) ============ */
 async function loadScanByDate(d){
-  return {date:d,rows:parseCSV(await fetchGz(`data/scan/${d}.csv.gz`))};
+  return {date:d,rows:parseScan(await fetchGz(`data/scan/${d}.csv.gz`))};
 }
 function isoWeek(ds){
   const dt=new Date(ds+'T00:00:00Z'); const day=(dt.getUTCDay()+6)%7;
@@ -1605,7 +1665,7 @@ async function loadScanByMonth(mth){
   const dates=await getScanDates();
   const sd=dates?dates.filter(d=>d.startsWith(mth)).pop():null;
   if(!sd)return null;
-  return {date:sd,rows:parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))};
+  return {date:sd,rows:parseScan(await fetchGz(`data/scan/${sd}.csv.gz`))};
 }
 function stFilter(rows,rmin,mmin){
   return rows.filter(r=>r.rsi_m!=null&&(rmin==null||r.rsi_m>=rmin)&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)))
@@ -1656,7 +1716,7 @@ function makeStrategy(P,fixedN,title,opts){
       inst.sectorNames=($('Sectors').value||'').split(',').map(s=>s.trim()).filter(Boolean);
       if(!inst.sectorNames.length){setS(P+'SetupStatus','Name your sectors first (comma separated).','warn');return;}
     }
-    const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
+    const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
     inst.scr=stFilter(rows,rmin,mmin);
     inst.S={screenDate:sd,rmin,mmin};
     const secTd=r=>opts.sectors?`<td><select class="${P}SecPick" data-sym="${r.symbol}">${inst.sectorNames.map(n=>`<option value="${n}">${n}</option>`).join('')}</select></td>`:'';
@@ -1731,6 +1791,10 @@ function makeStrategy(P,fixedN,title,opts){
       sc=await loadScanByMonth(nm);
     }
     if(!sc){inst.render('No data beyond '+S.month+' — strategy ends here.');$('NextBtn').disabled=true;return;}
+    if(S.stopAt){                       // "run till date" - stop before stepping past it
+      const cap=opts.weekly?S.stopAt:S.stopAt.slice(0,7);
+      if(nm>cap){ inst.render('Stopped at your end date '+S.stopAt+' — press Next to carry on.'); return; }
+    }
     S.month=nm;
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
     for(const h of S.holdings){
@@ -1818,7 +1882,16 @@ function makeStrategy(P,fixedN,title,opts){
     else {hs.col=col; hs.dir=col==='symbol'||col==='month'||col==='sector'?1:-1;}
     inst.render();
   };
-  inst.runTillToday=async function(){
+  inst.runTill=async function(){
+    if(!inst.S)return;
+    const box=document.getElementById(P+'RunTo');
+    const d=box?box.value:'';
+    if(!d){setS(P+'Head','Pick an end date first.','warn');return;}
+    inst.S.stopAt=d;
+    await inst.runTillToday(true);
+    inst.S.stopAt=null;
+  };
+  inst.runTillToday=async function(tillDate){
     if(!inst.S){return;}
     const btn=document.getElementById(P+'RunAllBtn');
     if(btn){btn.disabled=true;btn.textContent='running…';}
@@ -1831,7 +1904,7 @@ function makeStrategy(P,fixedN,title,opts){
       }
     }finally{
       if(btn){btn.disabled=false;btn.textContent='⏩ Run till today';}
-      inst.render(`auto-run finished at ${inst.S.month} — press Next to continue manually.`);
+      inst.render(`auto-run finished at ${inst.S.month}${tillDate?' (your end date)':''} — press Next to continue manually.`);
     }
   };
   inst.stats=function(){
@@ -2096,7 +2169,7 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
     const dates=await getScanDates();
     const sd=dates?dates.filter(d=>d<=dt).pop():null;
     if(!sd){setS('sxSetupStatus','No trading day found.','warn');return;}
-    const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
+    const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
     SCAN={date:sd,rows,map:new Map(rows.map(r=>[r.symbol,r]))};
     PICKED=[]; renderSel();
     const inp=el('sxPickInput');
@@ -2268,8 +2341,12 @@ async function acRun(P){
   if(!dates||!dates.length){setS(P+'SetupStatus','Data not connected yet.','warn');return;}
   const lastMonth=dates[dates.length-1].slice(0,7);
   if(start>lastMonth){setS(P+'SetupStatus','Start month is beyond available data.','warn');return;}
+  const emEl=document.getElementById(P+'EndMonth'), eyEl=document.getElementById(P+'EndYear');
+  const endSel=(emEl&&eyEl&&emEl.value&&eyEl.value)?`${eyEl.value}-${emEl.value}`:null;
+  if(endSel&&endSel<start){setS(P+'SetupStatus','End month is before the start month.','warn');return;}
+  const stopMonth=endSel&&endSel<lastMonth?endSel:lastMonth;
   let months=[]; let [y,m]=start.split('-').map(Number);
-  while(true){const k=`${y}-${String(m).padStart(2,'0')}`; if(k>lastMonth)break; months.push(k); m++; if(m>12){m=1;y++;}}
+  while(true){const k=`${y}-${String(m).padStart(2,'0')}`; if(k>stopMonth)break; months.push(k); m++; if(m>12){m=1;y++;}}
   // month-end discipline: only rebalance on COMPLETED months — the latest data month
   // counts only once its month-end file (day >= 28) is present
   const lastOf={}; dates.forEach(d=>{lastOf[d.slice(0,7)]=d;});
@@ -2445,6 +2522,15 @@ async function drawChart(){
   }};
   const logY=document.getElementById('logScale').checked;
   const candle=rows.length<=500&&rows.every(r=>r.open!=null&&r.high!=null&&r.low!=null);
+  // Supertrend rides above or below price; split it so a flip is not drawn as a jump
+  const stOn=(document.getElementById('showST')||{}).checked&&rows.some(r=>r.st!=null);
+  const stUp=stOn?rows.map(r=>r.st_dir===1?r.st:null):[];
+  const stDn=stOn?rows.map(r=>r.st_dir===-1?r.st:null):[];
+  const stSets=stOn?[
+    {label:'Supertrend up',data:stUp,borderColor:'#3fb950',borderWidth:1.8,pointRadius:0,
+     spanGaps:false,tension:0,order:0,type:'line'},
+    {label:'Supertrend down',data:stDn,borderColor:'#f85149',borderWidth:1.8,pointRadius:0,
+     spanGaps:false,tension:0,order:0,type:'line'}]:[];
   if(candle){
     const up='#00e676',dn='#ff3b30';
     const cols=rows.map(r=>r.close>=r.open?up:dn);
@@ -2453,7 +2539,7 @@ async function drawChart(){
         {label:'wick',data:rows.map(r=>[r.low,r.high]),backgroundColor:cols,grouped:false,
           barPercentage:.16,categoryPercentage:1,order:2},
         {label:CUR.label,data:rows.map(r=>[Math.min(r.open,r.close),Math.max(r.open,r.close)]),
-          backgroundColor:cols,grouped:false,barPercentage:.72,categoryPercentage:1,order:1}]},
+          backgroundColor:cols,grouped:false,barPercentage:.72,categoryPercentage:1,order:1}].concat(stSets)},
       plugins:[crosshairPlugin],
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},onHover:hoverOpt,
         plugins:{legend:{display:false},
@@ -2465,7 +2551,7 @@ async function drawChart(){
   } else {
     priceChart=new Chart(document.getElementById('priceChart'),{type:'line',
       data:{labels,datasets:[{label:CUR.label,data:rows.map(r=>r.close),borderColor:'#2f81f7',
-        backgroundColor:'rgba(47,129,247,.08)',fill:true,borderWidth:1.7,pointRadius:0,tension:.1}]},
+        backgroundColor:'rgba(47,129,247,.08)',fill:true,borderWidth:1.7,pointRadius:0,tension:.1}].concat(stSets)},
       plugins:[crosshairPlugin],
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},onHover:hoverOpt,
         plugins:{legend:{display:false}},
@@ -2522,7 +2608,7 @@ async function ssRun(){
     const dates=await getScanDates();
     const sd=dates&&dates.length?dates[dates.length-1]:null;
     if(!sd){setS('ssStatus','Scan index unavailable.','warn');SSRUNNING=false;return;}
-    const uni=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
+    const uni=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`))
       .filter(r=>mc?(r.mcap_cr!=null&&r.mcap_cr>=mc):true)
       .sort((a,b)=>(b.mcap_cr??-1)-(a.mcap_cr??-1)).map(r=>r.symbol);
     let done=0;
@@ -2662,6 +2748,11 @@ async function shRun(){
   const PH=+document.getElementById('shPhase').value;
   const phases=PH===2?[0,1]:[PH];
   SHRUNNING=true; SHRES=[];
+  const shMem=await foMembership();
+  const shSet=new Set();
+  if(shMem){ for(const [,set] of shMem) set.forEach(x=>shSet.add(x)); }
+  if(!shSet.size)FOLIST.forEach(x=>shSet.add(x));
+  const SHUNI=[...shSet];
   try{
     const cal=await shCalendar();
     let done=0;
@@ -2750,12 +2841,18 @@ async function shRun(){
         kept.forEach(k=>SHRES.push(k));
       }catch(e){}
       done++;
-      if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${FOLIST.length} · ${SHRES.length} trades`,'');
+      if(done%10===0)setS('shStatus',`scanning F&O universe… ${done}/${SHUNI.length} · ${SHRES.length} trades`,'');
     };
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<FOLIST.length){const s=FOLIST[idx++]; await scan(s);}
+      while(idx<SHUNI.length){const s=SHUNI[idx++]; await scan(s);}
     }));
+    if(shMem){          // an entry only counts if the share was in F&O that month
+      SHRES=SHRES.filter(r=>{
+        const set=foOn(shMem,String(r.entryDate));
+        return !set||set.has(r.sym);
+      });
+    }
     const df=document.getElementById('shFrom').value, dt=document.getElementById('shTo').value;
     if(df)SHRES=SHRES.filter(r=>String(r.entryDate)>=df);
     if(dt)SHRES=SHRES.filter(r=>String(r.entryDate)<=dt+'~');
@@ -3189,7 +3286,7 @@ async function plRefresh(){
   for(let i=0;i<dates.length;i++){
     setS('plStatus',`loading ${i+1}/${dates.length} days…`,'');
     try{
-      const rows=parseCSV(await fetchGz(`data/scan/${dates[i]}.csv.gz`));
+      const rows=parseScan(await fetchGz(`data/scan/${dates[i]}.csv.gz`));
       maps.push({date:dates[i],px:new Map(rows.map(r=>[r.symbol,r.close]))});
       if(i===dates.length-1)PLLAST={date:dates[i],px:maps[maps.length-1].px,
         rsi:new Map(rows.map(r=>[r.symbol,r.rsi_m]))};
@@ -3498,7 +3595,7 @@ async function loadQuotes(){
     const dates=await getScanDates();
     const sd=dates&&dates.length?dates[dates.length-1]:null;
     if(!sd)return;
-    const rows=parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`));
+    const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
     WLQ=new Map(rows.map(r=>[r.symbol,{c:r.close,ch:r.chg_d}]));
   }catch(e){}
 }
@@ -4113,7 +4210,7 @@ async function fullUniverse(){
   const dates=await getScanDates();
   const sd=dates&&dates.length?dates[dates.length-1]:null;
   if(!sd)return [];
-  return parseCSV(await fetchGz(`data/scan/${sd}.csv.gz`))
+  return parseScan(await fetchGz(`data/scan/${sd}.csv.gz`))
     .sort((a,b)=>(b.mcap_cr??-1)-(a.mcap_cr??-1)).map(r=>r.symbol);
 }
 
@@ -4466,6 +4563,29 @@ function bhDownload(kind){
   ixExport(kind,head,body,'buy_and_hold_'+rows[0].buyDate,'bhHead',{name:'Monthly value',head:ch,rows:cr});
 }
 
+/* ---- F&O membership as it stood, month by month (falls back to today's list) ---- */
+let FOMEM=null;
+async function foMembership(){
+  if(FOMEM!==null)return FOMEM;
+  try{
+    const rows=parseCSV(await fetchGz('data/fo_members.csv.gz'));
+    const m=new Map();
+    rows.forEach(r=>{ if(!r.month||!r.symbol)return;
+      let set=m.get(r.month); if(!set){set=new Set();m.set(r.month,set);} set.add(r.symbol); });
+    FOMEM=m.size?m:false;
+  }catch(e){ FOMEM=false; }
+  return FOMEM;
+}
+// the list in force on a date; if we have no month for it, the newest earlier month
+function foOn(mem,date){
+  if(!mem)return null;
+  const ym=String(date).slice(0,7);
+  if(mem.has(ym))return mem.get(ym);
+  let best=null;
+  for(const k of mem.keys()) if(k<=ym&&(best===null||k>best))best=k;
+  return best?mem.get(best):null;
+}
+
 /* ============ Nifty-Timed Short — index times it, F&O stocks carry it ============ */
 let SNRES=null, SNBUSY=false, snCh=null, SNSCAN=new Map();
 const sng=id=>document.getElementById(id);
@@ -4496,18 +4616,24 @@ async function snRun(){
       if(a<lvl&&b>=lvl&&(!from||nif[i].date>=from)&&(!to||nif[i].date<=to))trig.push(i);
     }
     if(!trig.length){setS('snStatus',`The Nifty daily RSI never crossed up through ${lvl} in that window.`,'warn');return;}
-    // every F&O stock's daily RSI and close, once
-    setS('snStatus',`loading ${FOLIST.length} F&O stocks…`,'');
+    const mem=await foMembership();
+    // every stock that has ever been in F&O over the tested window
+    const universe=new Set();
+    if(mem){ for(const [ym,set] of mem){ if((!from||ym>=from.slice(0,7))&&(!to||ym<=to.slice(0,7)))
+      set.forEach(x=>universe.add(x)); } }
+    if(!universe.size)FOLIST.forEach(x=>universe.add(x));
+    const FOALL=[...universe];
+    setS('snStatus',`loading ${FOALL.length} F&O stocks…`,'');
     const px=new Map(); let done=0;
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<FOLIST.length){
-        const sym=FOLIST[idx++];
+      while(idx<FOALL.length){
+        const sym=FOALL[idx++];
         try{
           const rows=await loadSeries('eq',sym);
           px.set(sym,new Map(rows.map(r=>[r.date,r])));
         }catch(e){}
-        if(++done%25===0)setS('snStatus',`loading F&O stocks… ${done}/${FOLIST.length}`,'');
+        if(++done%25===0)setS('snStatus',`loading F&O stocks… ${done}/${FOALL.length}`,'');
       }
     }));
     // walk the cycles
@@ -4529,8 +4655,9 @@ async function snRun(){
           SNSCAN.set(sd,rsiMap);
         }catch(e){ continue; }
       }
+      const listed=foOn(mem,d0)||new Set(FOLIST);   // who was actually in F&O that month
       const cand=[];
-      FOLIST.forEach(sym=>{
+      listed.forEach(sym=>{
         const m=px.get(sym); if(!m)return;
         const r=m.get(d0), sr=rsiMap.get(sym);
         if(!r||!(r.close>0)||!sr||sr[rsiKey]==null)return;
@@ -4572,7 +4699,7 @@ async function snRun(){
         days:cIdx-i,open,legs,pnl,invested,ret:invested?pnl/invested*100:0});
     }
     if(!cycles.length){setS('snStatus','No basket could be priced in that window.','warn');return;}
-    SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL,stf};
+    SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL,stf,hist:!!mem};
     snRender(); scanSave('sn');
   }finally{ SNBUSY=false; }
 }
@@ -4625,7 +4752,8 @@ function snRender(){
   setS('snStatus',`${cycles.length} basket(s): Nifty daily RSI crossed up through ${lvl}, shorted the ${N} ${lowFirst?'weakest':'strongest'} F&O stocks by ${tfW.toLowerCase()} RSI, covered when Nifty daily %K (length ${SNRES.KL??14}) reached ${cover}`+
     (maxDays!=null?`, or after ${maxDays} trading days, whichever came first`:'')+
     `. Net ${ixPM0(tot)}.`+btNote('sn',cycles.filter(c=>c.open).length,cycles.length)+
-    ' F&O membership is the current list, so a stock may not have been in F&O at the time.',tot>=0?'ok':'warn');
+    (SNRES.hist?' F&O membership is the real list for each month, so only shares actually in F&O then were shortable.'
+              :' No monthly F&O history found, so today\u2019s list was used throughout.'),tot>=0?'ok':'warn');
   snShow(cycles.length-1);
 }
 function snShow(i){
@@ -4809,6 +4937,11 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
   document.getElementById('mrYear').value=cy-1;
   document.getElementById('mrMonth').value='01';
   document.getElementById('mrMonth2').value=String(to.getMonth()+1).padStart(2,'0');
+  ['acEndYear','taEndYear'].forEach(id=>{
+    const e=document.getElementById(id); if(!e)return;
+    for(let yy=cy;yy>=1998;yy--){const o=document.createElement('option');o.value=yy;o.textContent=yy;e.appendChild(o);}
+    e.value='';
+  });
   ['acYear','taYear'].forEach(id=>{
     const ays=document.getElementById(id); if(!ays)return;
     for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
