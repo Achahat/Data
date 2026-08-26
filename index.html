@@ -93,6 +93,14 @@ a{color:var(--accent);}
 </style>
 </head>
 <body>
+<div id="stopBar" class="hidden" style="position:fixed;right:18px;bottom:18px;z-index:9999;
+     display:flex;align-items:center;gap:10px;background:#1b1e27;border:1px solid #ef4444;
+     border-radius:10px;padding:9px 13px;box-shadow:0 6px 22px -8px #000">
+  <span id="stopTxt" style="font-size:12.5px;color:#fca5a5">a scan is running</span>
+  <button onclick="runStop()" style="background:#ef4444;border:0;color:#fff;font-weight:700;
+     padding:6px 14px;border-radius:7px;cursor:pointer">■ STOP</button>
+</div>
+
 
 <div class="topbar">
   <div class="brand"><span class="dot" id="liveDot"></span><span id="liveText">Connecting…</span>
@@ -310,6 +318,7 @@ a{color:var(--accent);}
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="acMc" style="width:110px" placeholder="e.g. 5000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="acAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun()">Run till today ▶</button>
+      <button id="acCont" class="hidden" onclick="acContinue('ac')">▶ Continue</button>
     </div>
     <div class="status" id="acSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
     <div class="hidden"><table id="acPickTbl"></table><button id="acStartBtn"></button></div>
@@ -829,6 +838,7 @@ a{color:var(--accent);}
     <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
     <button onclick="plRefresh()">Refresh</button>
     <button class="ghost" onclick="plSyncPrices()">🔄 Sync prices to latest close</button>
+    <button class="ghost" onclick="plFixCA()">✂️ Fix splits &amp; bonuses</button>
     <button class="ghost" onclick="plRerunWhole()">↻ Re-run on whole shares</button>
     <button class="ghost" onclick="plDownload()">Download Excel</button>
   </div>
@@ -868,6 +878,7 @@ a{color:var(--accent);}
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="taMc" style="width:110px" placeholder="e.g. 5000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="taAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <button onclick="acRun('ta')">Run till today ▶</button>
+      <button id="taCont" class="hidden" onclick="acContinue('ta')">▶ Continue</button>
     </div>
     <div class="status" id="taSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
     <div class="hidden"><table id="taPickTbl"></table><button id="taStartBtn"></button></div>
@@ -1572,9 +1583,10 @@ async function mmFind(){
   if(!dates||!dates.length){setS('mmStatus','Month scanning needs the scan index (MEGA/local mode).','warn');return;}
   const months=monthList(a,b);
   if(months.length>360){setS('mmStatus','Period too long.','warn');return;}
-  MMRESULTS=[];
+  MMRESULTS=[]; runBegin();
   let done=0;
   for(const mth of months){
+    if(stopped())break;
     const sd=dates.filter(d=>d.startsWith(mth)).pop();
     done++;
     if(!sd) continue;   // month outside data
@@ -1593,7 +1605,9 @@ async function mmFind(){
   renderMm();
   const total=MMRESULTS.reduce((s,m)=>s+m.rows.length,0);
   setS('mmStatus',`${total.toLocaleString()} share-months across ${MMRESULTS.length} months (monthly RSI${test.txt||' — no level set'}`+
-    `${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}; ETFs & funds excluded).`,total?'ok':'warn');
+    `${mmin!=null?', mcap ≥ ₹'+fmt0(mmin)+' cr':''}; ETFs & funds excluded).`+stopNote(MMRESULTS.length,months.length),
+    stopped()?'warn':(total?'ok':'warn'));
+  runEnd();
 }
 function renderMm(){
   const t=document.getElementById('mmTbl');
@@ -1679,6 +1693,16 @@ function buyWhole(S,amount,price){        // draws `amount` out of S.cash
   return {units,spent};
 }
 const portValue=S=>S.holdings.reduce((t,h)=>t+h.units*h.lastClose,0)+(S.cash||0);
+
+/* ============ Stop button — bail out of any long run midway ============ */
+let RUNNING=0, RUNSTOP=false;
+function runBegin(){ RUNSTOP=false; RUNNING++; const b=document.getElementById('stopBar'); if(b)b.classList.remove('hidden'); }
+function runEnd(){ RUNNING=Math.max(0,RUNNING-1); if(!RUNNING){ const b=document.getElementById('stopBar'); if(b)b.classList.add('hidden'); } }
+function runStop(){ if(!RUNNING)return; RUNSTOP=true;
+  const t=document.getElementById('stopTxt'); if(t)t.textContent='stopping…'; }
+const stopped=()=>RUNSTOP;
+/* text to append to a status line when the user cut a run short */
+const stopNote=(done,total)=>RUNSTOP?` — STOPPED by you at ${fmt0(done)} of ${fmt0(total)}; the results below cover only what had been read.`:'';
 
 function makeStrategy(P,fixedN,title,opts){
   opts=opts||{};
@@ -2353,17 +2377,31 @@ async function acRun(P){
   months=months.filter(k=>k<lastMonth||(lastOf[k]&&+lastOf[k].slice(8,10)>=28));
   const S={rmin:null,mmin:mcMin,amt,holdings:[],log:[],series:[],month:start,invested:0,screenDate:null};
   STRATS[P].S=S;
-  let first=true, i=0;
-  for(const mth of months){
-    i++;
-    setS(P+'SetupStatus',`running ${mth}… (${i}/${months.length})`,'');
+  S.auto={months,topN,mcMin,i:0};
+  await acLoop(P);
+}
+
+/* The walk itself, kept separate so STOP can leave a bookmark and Continue can
+   pick the run up from exactly the month it was halted on. */
+async function acLoop(P){
+  P=P||'ac';
+  const S=STRATS[P]&&STRATS[P].S;
+  if(!S||!S.auto){setS(P+'SetupStatus','Nothing to continue — start a run first.','warn');return;}
+  const months=S.auto.months, topN=S.auto.topN, mcMin=S.auto.mcMin, amt=S.amt;
+  const resuming=S.auto.i>0;
+  runBegin(); acBtns(P);
+  for(let i=S.auto.i;i<months.length;i++){
+    const mth=months[i];
+    if(stopped()){S.auto.i=i;break;}
+    S.auto.i=i+1;
+    setS(P+'SetupStatus',`running ${mth}… (${i+1}/${months.length})`,'');
     let sc=null;
     try{sc=await loadScanByMonth(mth);}catch(e){}
     if(!sc)continue;
     const rows=sc.rows.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcMin).sort((a,b)=>b.rsi_m-a.rsi_m);
     const top=rows.slice(0,topN);
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
-    if(first){
+    if(!S.holdings.length){
       if(!top.length){
         const nRows=sc.rows.length;
         const nRsi=sc.rows.filter(r=>r.rsi_m!=null).length;
@@ -2381,7 +2419,7 @@ async function acRun(P){
       });
       S.invested=S.holdings.length*amt;
       S.series.push({month:mth,value:S.invested});
-      first=false; continue;
+      continue;
     }
     S.month=mth;
     for(const h of S.holdings){const r=map.get(h.sym); if(r){h.lastClose=r.close;h.rsi=r.rsi_m;} else h.rsi=null;}
@@ -2417,9 +2455,11 @@ async function acRun(P){
     }
     S.series.push({month:mth,value:portValue(S)});
   }
+  const halted=stopped()&&S.auto.i<months.length;
+  runEnd();
   if(!S.series.length||!S.holdings.length||!S.invested){
     setS(P+'SetupStatus','No shares matched your filters in that period - check the RSI/mcap levels, or wait for MEGA to finish syncing the data, then run again.','warn');
-    STRATS[P].S=null; return;
+    STRATS[P].S=null; acBtns(P); return;
   }
   try{
     const nrows=await loadSeries('ix','NIFTY_50');
@@ -2429,8 +2469,30 @@ async function acRun(P){
   document.getElementById(P+'Setup').classList.add('hidden');
   document.getElementById(P+'Run').classList.remove('hidden');
   try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
-  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ≥ ₹${fmt0(mcMin)} cr`);
-  setS(P+'SetupStatus','done','ok');
+  const done=S.auto.i, total=months.length;
+  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ≥ ₹${fmt0(mcMin)} cr`+
+    (halted?` · PAUSED at ${S.month} (${done}/${total} months)`:''));
+  setS(P+'SetupStatus',
+    halted?`Paused at ${S.month} — ${done} of ${total} months done, ${total-done} to go. Look around, then press Continue.`
+          :(resuming?`Finished — carried on to ${S.month}.`:'done'),
+    halted?'warn':'ok');
+  acBtns(P);
+}
+
+/* show Continue only while a run is sitting half-finished */
+function acBtns(P){
+  const b=document.getElementById(P+'Cont');
+  if(!b)return;
+  const S=STRATS[P]&&STRATS[P].S;
+  const half=S&&S.auto&&S.auto.i>0&&S.auto.i<S.auto.months.length&&!RUNNING;
+  b.classList.toggle('hidden',!half);
+  if(half)b.textContent=`▶ Continue from ${S.auto.months[S.auto.i]}`;
+}
+async function acContinue(P){
+  P=P||'ac';
+  const S=STRATS[P]&&STRATS[P].S;
+  if(!S||!S.auto){setS(P+'SetupStatus','Nothing to continue.','warn');return;}
+  await acLoop(P);
 }
 function acReset(P){
   P=P||'ac';
@@ -2602,7 +2664,7 @@ async function ssRun(){
   const tf=document.getElementById('ssTf').value;
   const mc=+document.getElementById('ssMc').value||0;
   const KL=Math.max(2,+document.getElementById('ssKlen').value||14);
-  SSRUNNING=true; SSRES=[];
+  SSRUNNING=true; SSRES=[]; runBegin();
   try{
     setS('ssStatus','building universe…','');
     const dates=await getScanDates();
@@ -2643,11 +2705,12 @@ async function ssRun(){
     };
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<uni.length){const my=uni[idx++]; await scanSym(my);}
+      while(idx<uni.length&&!stopped()){const my=uni[idx++]; await scanSym(my);}
     }));
     SSRES.sort((a,b)=>b.sig.localeCompare(a.sig));
     SSPARAMS=[R,S,N,F,tf]; ssRender(R,S,N,F,tf); scanSave('ss');
-  }finally{SSRUNNING=false;}
+    if(stopped()){const e=document.getElementById('ssStatus'); if(e)e.innerHTML='<b>Stopped by you</b> — this covers only the shares read so far. '+e.innerHTML;}
+  }finally{SSRUNNING=false; runEnd();}
 }
 function ssRerender(){ if(SSPARAMS) ssRender.apply(null,SSPARAMS); }
 function ssRender(R,S,N,F,tf){
@@ -2747,7 +2810,7 @@ async function shRun(){
   const JF=(+document.getElementById('shJFall').value||40)/100;
   const PH=+document.getElementById('shPhase').value;
   const phases=PH===2?[0,1]:[PH];
-  SHRUNNING=true; SHRES=[];
+  SHRUNNING=true; runBegin(); SHRES=[];
   const shMem=await foMembership();
   const shSet=new Set();
   if(shMem){ for(const [,set] of shMem) set.forEach(x=>shSet.add(x)); }
@@ -2845,7 +2908,7 @@ async function shRun(){
     };
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<SHUNI.length){const s=SHUNI[idx++]; await scan(s);}
+      while(idx<SHUNI.length&&!stopped()){const s=SHUNI[idx++]; await scan(s);}
     }));
     if(shMem){          // an entry only counts if the share was in F&O that month
       SHRES=SHRES.filter(r=>{
@@ -2858,7 +2921,8 @@ async function shRun(){
     if(dt)SHRES=SHRES.filter(r=>String(r.entryDate)<=dt+'~');
     SHRES.sort((a,b)=>String(b.entryDate).localeCompare(String(a.entryDate)));
     shRender(); scanSave('sh');
-  }finally{SHRUNNING=false;}
+    if(stopped()){const e=document.getElementById('shStatus'); if(e)e.innerHTML='<b>Stopped by you</b> — this covers only the shares read so far. '+e.innerHTML;}
+  }finally{SHRUNNING=false; runEnd();}
 }
 function shRender(){
   const closed=SHRES.filter(r=>!r.open);
@@ -3289,7 +3353,7 @@ async function plRefresh(){
       const rows=parseScan(await fetchGz(`data/scan/${dates[i]}.csv.gz`));
       maps.push({date:dates[i],px:new Map(rows.map(r=>[r.symbol,r.close]))});
       if(i===dates.length-1)PLLAST={date:dates[i],px:maps[maps.length-1].px,
-        rsi:new Map(rows.map(r=>[r.symbol,r.rsi_m]))};
+        rsi:new Map(rows.map(r=>[r.symbol,r.rsi_m])),rows};
     }catch(e){}
   }
   if(maps.length<2){setS('plStatus','Not enough daily data.','warn');return;}
@@ -3315,6 +3379,22 @@ async function plRefresh(){
   PLDATA={dates:maps.map(d=>d.date),series,nifty};
   if(!PLHOLDSEL||!series.some(s=>s.p===PLHOLDSEL))PLHOLDSEL=series[0].p;
   plRender();
+}
+/* ---- probable next change: who is weakest inside, who is strongest outside ----
+   Same rule the Next button uses: sell the holding with the LOWEST Monthly RSI,
+   buy the highest Monthly RSI share that passes the strategy's own filters.     */
+function plProbable(p){
+  const S=STRATS[p]&&STRATS[p].S;
+  if(!S||!S.holdings||!S.holdings.length||!PLLAST||!PLLAST.rows)return null;
+  const rsiOf=sym=>{const v=PLLAST.rsi.get(sym);return v==null?null:v;};
+  const held=new Set(S.holdings.map(h=>h.sym));
+  const outs=S.holdings.map(h=>({sym:h.sym,rsi:rsiOf(h.sym)}))
+    .sort((a,b)=>((a.rsi==null?-1:a.rsi))-((b.rsi==null?-1:b.rsi)));
+  const ins=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null)
+    .filter(r=>!held.has(r.symbol)).slice(0,4)
+    .map(r=>({sym:r.symbol,rsi:r.rsi_m}));
+  if(!outs.length||!ins.length)return null;
+  return {out:outs[0],outNext:outs.slice(1,3),in:ins[0],inNext:ins.slice(1,3),date:PLLAST.date};
 }
 /* ---- per-share breakdown, so every card can be checked line by line ---- */
 function plHoldRows(p){
@@ -3463,6 +3543,58 @@ async function plRerunWhole(){
   await plRefresh();
   setS('plStatus','Every tracked strategy has been re-run on whole shares.','ok');
 }
+/* ---- corporate actions: re-base holdings after a split, bonus or rights ----
+   Prices in the archive are BACK-adjusted, so the day a split goes ex the whole
+   history is divided by the ratio. A holding stored before that still carries the
+   old basis, so the card shows a phantom fall (TD Power, 1:2 split, 24-Aug-2026).
+   Anchor on the price the strategy actually paid: look up the adjusted close for
+   the same buy date today, and the ratio between them IS the corporate action.
+   units go up by that ratio, buy price comes down, so the money is unchanged.   */
+async function plFixCA(){
+  const live=PLDEFS.filter(([p])=>STRATS[p]&&STRATS[p].S&&STRATS[p].S.holdings&&STRATS[p].S.holdings.length);
+  if(!live.length){setS('plStatus','No strategies running.','warn');return;}
+  setS('plStatus','checking every holding against the adjusted history…','');
+  const seriesCache=new Map();
+  const closeOn=async(sym,anchor)=>{           // anchor = 'YYYY-MM' or 'YYYY-MM-DD'
+    if(!seriesCache.has(sym)){
+      try{ seriesCache.set(sym,await loadSeries('eq',sym)); }
+      catch(e){ seriesCache.set(sym,null); }
+    }
+    const rows=seriesCache.get(sym);
+    if(!rows||!rows.length)return null;
+    let out=null;
+    for(const r of rows){ if(String(r.date).slice(0,anchor.length)<=anchor)out=r; else break; }
+    return out?out.close:null;
+  };
+  const fixed=[]; let strategies=0;
+  for(const [p,label] of live){
+    const S=STRATS[p].S; let n=0;
+    for(const h of S.holdings){
+      if(!(h.buyPrice>0)||!h.buyMonth)continue;
+      const cur=await closeOn(h.sym,String(h.buyMonth));
+      if(cur==null||!(cur>0))continue;
+      const f=cur/h.buyPrice;                       // 0.5 after a 1:2 split
+      if(Math.abs(f-1)<0.005)continue;              // ordinary rounding, leave it
+      const before=h.units*h.lastClose;
+      h.units=h.units/f; h.buyPrice=cur; h.cost=h.units*cur;
+      if(h.lastClose>0)h.lastClose=h.lastClose*f;
+      const px=PLLAST&&PLLAST.px.get(h.sym); if(px!=null)h.lastClose=px;
+      fixed.push({p,label,sym:h.sym,f:+f.toFixed(4),units:h.units,before});
+      n++;
+    }
+    if(!n)continue;
+    strategies++;
+    const v=S.holdings.reduce((s,x)=>s+x.units*x.lastClose,0)+(S.cash||0);
+    if(S.series&&S.series.length&&S.series[S.series.length-1].month===S.month)
+      S.series[S.series.length-1].value=v;
+    try{localStorage.setItem('strat_'+p,JSON.stringify(S));}catch(e){}
+    try{STRATS[p].render('re-based after a corporate action');}catch(e){}
+  }
+  if(!fixed.length){setS('plStatus','No holding needed a corporate-action adjustment.','ok');return;}
+  const txt=fixed.map(x=>`${x.label}: ${x.sym} ×${(1/x.f).toFixed(2)} → ${fmt0(x.units)} shares`).join(' · ');
+  setS('plStatus',`Re-based ${fixed.length} holding(s) across ${strategies} strategy(ies). ${txt}`,'ok');
+  plRefresh();
+}
 function plSyncPrices(){
   if(!PLLAST){setS('plStatus','Refresh first.','warn');return;}
   let touched=0, strategies=0;
@@ -3503,6 +3635,23 @@ function plRender(){
     const mtd=(v!=null&&base!=null)?v-base:null;
     const mtdPct=(mtd!=null&&base)?mtd/base*100:null;
     const tot=(v!=null&&s.invested)?(v-s.invested)/s.invested*100:null;
+    const pr=plProbable(s.p);
+    const rq=x=>x.rsi==null?'—':fmt(x.rsi,1);
+    const probHtml=!pr?'':`
+      <div style="margin-top:8px;padding-top:7px;border-top:1px dashed ${s.color}44">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.3px">PROBABLE NEXT CHANGE
+          <span style="opacity:.7">· Monthly RSI as on ${pr.date}</span></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:12.5px;flex-wrap:wrap">
+          <span class="neg" style="font-weight:600">OUT ${symCell(pr.out.sym,pr.date)}</span>
+          <span style="color:var(--muted)">${rq(pr.out)}</span>
+          <span style="color:${s.color};font-weight:700">&rarr;</span>
+          <span class="pos" style="font-weight:600">IN ${symCell(pr.in.sym,pr.date)}</span>
+          <span style="color:var(--muted)">${rq(pr.in)}</span>
+        </div>
+        ${(pr.outNext.length||pr.inNext.length)?`<div style="font-size:11px;color:var(--muted);margin-top:3px">
+          then out: ${pr.outNext.map(x=>x.sym+' '+rq(x)).join(', ')||'—'}
+          &nbsp;·&nbsp; then in: ${pr.inNext.map(x=>x.sym+' '+rq(x)).join(', ')||'—'}</div>`:''}
+      </div>`;
     return `<div class="subcard" style="flex:1;min-width:190px;margin-top:0;position:relative;overflow:hidden;
         border-left:3px solid ${s.color};
         background:linear-gradient(160deg,${s.color}1f 0%,${s.color}08 34%,transparent 72%);
@@ -3521,6 +3670,7 @@ function plRender(){
         ${mtdPct==null?'':`<span style="font-size:12px"> (${mtdPct>=0?'+':''}${fmt(mtdPct)}%)</span>`}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:6px">Value ₹${v==null?'—':fmt0(v)}
         ${tot==null?'':` · <span class="${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${fmt(tot)}%</span> total`}</div>
+      ${probHtml}
     </div>`;
   }).join('');
   // chart: daily % per strategy
@@ -4226,7 +4376,7 @@ async function ix5Run(){
   const mcMax=mcMaxRaw>0?mcMaxRaw:Infinity;
   const from=ixv('ix5From'), to=ixv('ix5To');
   if(mcMin>0&&mcMax<mcMin){setS('ix5Status','The upper market cap is below the lower one.','warn');return;}
-  IX5RUNNING=true; const res=[]; let noMcap=0, outBand=0;
+  IX5RUNNING=true; runBegin(); const res=[]; let noMcap=0, outBand=0;
   try{
     setS('ix5Status','building the universe…','');
     const uni=await fullUniverse();
@@ -4270,12 +4420,13 @@ async function ix5Run(){
     };
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<uni.length){ await scanSym(uni[idx++]); }
+      while(idx<uni.length&&!stopped()){ await scanSym(uni[idx++]); }
     }));
     res.sort((a,b)=>b.d.localeCompare(a.d));
     IX5RES={res,rB,kB,rS,kS,mcMin,mcMax:mcMaxRaw,scanned:uni.length,noMcap,outBand};
     ix5Render(); scanSave('ix5');
-  }finally{ IX5RUNNING=false; }
+    if(stopped()){const e=document.getElementById('ix5Status'); if(e)e.innerHTML='<b>Stopped by you</b> — this covers only the shares read so far. '+e.innerHTML;}
+  }finally{ IX5RUNNING=false; runEnd(); }
 }
 function ix5Render(){
   const {res,rB,kB,rS,kS,mcMin,mcMax,scanned,noMcap,outBand}=IX5RES;
@@ -4380,7 +4531,7 @@ async function bhScreen(){
   const rMax=+bhg('bhRsi').value, kMax=+bhg('bhStoch').value;
   const KL=Math.max(2,+bhg('bhKlen').value||14);
   const mcMin=+bhg('bhMc').value||0;
-  BHBUSY=true; BHCAND=[];
+  BHBUSY=true; BHCAND=[]; runBegin();
   try{
     setS('bhSetupStatus','building the universe…','');
     const uni=await fullUniverse();
@@ -4388,6 +4539,8 @@ async function bhScreen(){
     let done=0;
     const look=async sym=>{
       try{
+        done++;
+        if(done%25===0)setS('bhSetupStatus',`screening… ${done}/${uni.length} shares · ${BHCAND.length} oversold`,'');
         const daily=await loadSeries('eq',sym);
         const mcapOn=new Map(daily.filter(r=>r.mcap_cr!=null).map(r=>[r.date,r.mcap_cr]));
         let bars=resample(daily,'M');
@@ -4401,14 +4554,12 @@ async function bhScreen(){
         if(mcMin>0&&(mc==null||mc<mcMin))return;
         BHCAND.push({sym,date:b.date,close:b.close,rsi:b.rsi14,k:b.stoch_k,mc:mc??null,i});
       }catch(e){}
-      done++;
-      if(done%25===0)setS('bhSetupStatus',`screening… ${done}/${uni.length} shares · ${BHCAND.length} oversold`,'');
     };
     const pool=8; let idx=0;
-    await Promise.all(Array.from({length:pool},async()=>{ while(idx<uni.length){ await look(uni[idx++]); } }));
+    await Promise.all(Array.from({length:pool},async()=>{ while(idx<uni.length&&!stopped()){ await look(uni[idx++]); } }));
     BHCAND.sort((a,b)=>a.rsi-b.rsi);
     bhRenderPicks(mth,rMax,kMax,mcMin);
-  }finally{ BHBUSY=false; }
+  }finally{ BHBUSY=false; runEnd(); }
 }
 function bhRenderPicks(mth,rMax,kMax,mcMin){
   const t=bhg('bhPickTbl');
@@ -4427,7 +4578,7 @@ function bhRenderPicks(mth,rMax,kMax,mcMin){
       `<td>${c.mc==null?'—':fmt0(c.mc)}</td></tr>`).join('')+'</tbody>';
   bhg('bhStartBtn').classList.remove('hidden');
   updatePickCount('bh');
-  setS('bhSetupStatus',`${BHCAND.length} share(s) were oversold at the end of ${mth} — Monthly RSI < ${rMax}, Monthly %K < ${kMax}`+
+  setS('bhSetupStatus',(stopped()?'STOPPED by you — partial list. ':'')+`${BHCAND.length} share(s) were oversold at the end of ${mth} — Monthly RSI < ${rMax}, Monthly %K < ${kMax}`+
     (mcMin?`, mcap ≥ ₹${fmt0(mcMin)} cr`:'')+'. Tick the ones you want, set the amount and holding period, then buy.','ok');
 }
 async function bhRun(){
@@ -4603,7 +4754,7 @@ async function snRun(){
   const amt=+amtRaw, from=sng('snFrom').value, to=sng('snTo').value;
   const mdRaw=sng('snMaxDays').value;
   const maxDays=(mdRaw===''||!(+mdRaw>0))?null:Math.floor(+mdRaw);
-  SNBUSY=true;
+  SNBUSY=true; runBegin();
   try{
     setS('snStatus','loading the Nifty…','');
     let nif=await loadSeries('ix','NIFTY_50');
@@ -4627,7 +4778,7 @@ async function snRun(){
     const px=new Map(); let done=0;
     const pool=8; let idx=0;
     await Promise.all(Array.from({length:pool},async()=>{
-      while(idx<FOALL.length){
+      while(idx<FOALL.length&&!stopped()){
         const sym=FOALL[idx++];
         try{
           const rows=await loadSeries('eq',sym);
@@ -4701,7 +4852,7 @@ async function snRun(){
     if(!cycles.length){setS('snStatus','No basket could be priced in that window.','warn');return;}
     SNRES={cycles,lvl,cover,N,lowFirst,amt,maxDays,KL,stf,hist:!!mem};
     snRender(); scanSave('sn');
-  }finally{ SNBUSY=false; }
+  }finally{ SNBUSY=false; runEnd(); }
 }
 function snRender(){
   if(!SNRES)return;
