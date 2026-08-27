@@ -193,7 +193,7 @@ a{color:var(--accent);}
   <div id="stSetup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="stDate"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="stRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Monthly RSI min <span style="color:var(--muted);font-weight:400">(screening only)</span></label><input type="number" id="stRsi" style="width:100px" placeholder="e.g. 80"><label style="display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:3px"><input type="checkbox" id="stRlock" style="vertical-align:-1px"> keep as a filter every period</label></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="stMc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="stAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="stNextM"></div>
@@ -244,11 +244,11 @@ a{color:var(--accent);}
 
 <!-- MULTI CHANGE (step 4) -->
 <div class="card hidden" id="pane-mc">
-  <div class="section-head">Multi Change — you choose how many swaps per month</div>
+  <div class="section-head">Multi Change — top N by monthly RSI, you choose how many swaps per month</div>
   <div id="mcSetup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="mcDate"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="mcRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="mcTop" style="width:100px" value="30" min="1" max="300"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="mcMc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="mcAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div><label>Changes per month</label><input type="number" id="mcN" style="width:90px" value="2" min="1" max="10"></div>
@@ -256,7 +256,7 @@ a{color:var(--accent);}
       <button onclick="STRATS.mc.screen()">Screen shares</button>
       <button class="ghost hidden" id="mcStartBtn" onclick="STRATS.mc.start()">Start strategy with selected ▶</button>
     </div>
-    <div class="status" id="mcSetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
+    <div class="status" id="mcSetupStatus">Pick how many shares the portfolio holds (top N by monthly RSI), screen, untick anything you don't want, then start. Each month the weakest holding is offered up against the strongest share outside it.</div>
     <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('mc',true)">Select all</button>
       <button class="ghost mini" onclick="pickAll('mc',false)">Unselect all</button><span class="pill" id="mcPickCount"></span></div>
     <div class="tblwrap"><table id="mcPickTbl"></table></div>
@@ -362,7 +362,7 @@ a{color:var(--accent);}
     <div class="row">
       <div><label>Start date</label><input type="date" id="sxDate"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="sxAmt" style="width:120px" placeholder="e.g. 100000"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="sxRsi" style="width:100px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
+      <div><label>Monthly RSI min <span style="color:var(--muted);font-weight:400">(screening only)</span></label><input type="number" id="sxRsi" style="width:100px" placeholder="optional" oninput="STRATS.sx.refilter()"><label style="display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:3px"><input type="checkbox" id="sxRlock" style="vertical-align:-1px"> keep as a filter every period</label></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="sxMc" style="width:110px" placeholder="optional" oninput="STRATS.sx.refilter()"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="sxNextM"></div>
       <button onclick="STRATS.sx.screen()">Load shares</button>
@@ -646,14 +646,14 @@ a{color:var(--accent);}
   <div id="wkSetup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="wkDate"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="wkRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="wkTop" style="width:100px" value="30" min="1" max="300"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="wkMc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="wkAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="hidden"><input type="checkbox" id="wkNextM"></div>
       <button onclick="STRATS.wk.screen()">Screen shares</button>
       <button class="ghost hidden" id="wkStartBtn" onclick="STRATS.wk.start()">Start strategy with selected ▶</button>
     </div>
-    <div class="status" id="wkSetupStatus">Screen, tick the shares you want in the starting portfolio, then start. Ranking uses monthly RSI; you make one change per week.</div>
+    <div class="status" id="wkSetupStatus">Pick how many shares the portfolio holds (top N by monthly RSI), screen, untick anything you don't want, then start. Each week the weakest holding is offered up against the strongest share outside it.</div>
     <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('wk',true)">Select all</button>
       <button class="ghost mini" onclick="pickAll('wk',false)">Unselect all</button><span class="pill" id="wkPickCount"></span></div>
     <div class="tblwrap"><table id="wkPickTbl"></table></div>
@@ -698,7 +698,7 @@ a{color:var(--accent);}
   <div id="twSetup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="twDate"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="twRsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="twTop" style="width:100px" value="30" min="1" max="300"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="twMc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="twAmt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="hidden"><input type="checkbox" id="twNextM"></div>
@@ -919,7 +919,7 @@ a{color:var(--accent);}
   <div id="t1Setup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="t1Date"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="t1Rsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Monthly RSI min <span style="color:var(--muted);font-weight:400">(screening only)</span></label><input type="number" id="t1Rsi" style="width:100px" placeholder="e.g. 80"><label style="display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:3px"><input type="checkbox" id="t1Rlock" style="vertical-align:-1px"> keep as a filter every period</label></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="t1Mc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="t1Amt" style="width:120px" placeholder="e.g. 100000"></div>
       <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t1NextM"></div>
@@ -968,11 +968,11 @@ a{color:var(--accent);}
   </div>
 </div>
 <div class="card hidden" id="pane-t3">
-  <div class="section-head">Multi Change — you choose how many swaps per month</div>
+  <div class="section-head">Multi Change — top N by monthly RSI, you choose how many swaps per month</div>
   <div id="t3Setup">
     <div class="row">
       <div><label>Start date</label><input type="date" id="t3Date"></div>
-      <div><label>Monthly RSI min</label><input type="number" id="t3Rsi" style="width:100px" placeholder="e.g. 80"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="t3Top" style="width:100px" value="30" min="1" max="300"></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="t3Mc" style="width:110px" placeholder="e.g. 1000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" placeholder="e.g. 100000"></div>
       <div><label>Changes per month</label><input type="number" id="t3N" style="width:90px" value="2" min="1" max="10"></div>
@@ -1730,7 +1730,12 @@ function makeStrategy(P,fixedN,title,opts){
   inst.screen=async function(){
     const dt=$('Date').value;
     if(!dt){setS(P+'SetupStatus','Pick a start date.','warn');return;}
-    const rmin=$('Rsi').value===''?null:+$('Rsi').value;
+    // Panes with a "Top shares" box rank the universe on monthly RSI and keep the best N.
+    // Panes with the older "Monthly RSI min" box still screen on a level.
+    const topEl=$('Top');
+    const topN=topEl?Math.max(1,Math.min(+topEl.value||30,300)):null;
+    const rEl=$('Rsi');
+    const rmin=topN?null:((rEl&&rEl.value!=='')?+rEl.value:null);
     const mmin=$('Mc').value===''?null:+$('Mc').value;
     setS(P+'SetupStatus','loading…','');
     const dates=await getScanDates();
@@ -1742,7 +1747,9 @@ function makeStrategy(P,fixedN,title,opts){
     }
     const rows=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
     inst.scr=stFilter(rows,rmin,mmin);
-    inst.S={screenDate:sd,rmin,mmin};
+    if(topN)inst.scr=inst.scr.slice(0,topN);   // stFilter already sorts highest monthly RSI first
+    const rl=document.getElementById(P+'Rlock');
+    inst.S={screenDate:sd,rmin,mmin,topN,rlock:!!(rl&&rl.checked)};
     const secTd=r=>opts.sectors?`<td><select class="${P}SecPick" data-sym="${r.symbol}">${inst.sectorNames.map(n=>`<option value="${n}">${n}</option>`).join('')}</select></td>`:'';
     $('PickTbl').innerHTML='<tr><th></th><th>#</th><th style="text-align:left">Symbol</th>'+(opts.sectors?'<th style="text-align:left">Sector</th>':'')+'<th>RSI (monthly)</th><th>Close</th><th>Mcap ₹ cr</th></tr>'+
       inst.scr.slice(0,300).map((r,i)=>{
@@ -1754,7 +1761,11 @@ function makeStrategy(P,fixedN,title,opts){
     $('StartBtn').classList.remove('hidden');
     $('PickTbl').onchange=()=>updatePickCount(P);
     updatePickCount(P);
-    setS(P+'SetupStatus',`${inst.scr.length} shares qualify on ${sd}. Untick any you don't want, then start.`,'ok');
+    setS(P+'SetupStatus',
+      (topN?`Top ${inst.scr.length} by monthly RSI on ${sd}`+(mmin?`, market cap ≥ ₹${fmt0(mmin)} cr`:'')+
+            ` — from ${fmt(inst.scr[0]?inst.scr[0].rsi_m:0,1)} down to ${fmt(inst.scr[inst.scr.length-1]?inst.scr[inst.scr.length-1].rsi_m:0,1)}.`
+           :`${inst.scr.length} shares qualify on ${sd}.`)+
+      ` Untick any you don't want, then start.`,'ok');
   };
 
   inst.start=async function(symsOverride){
@@ -1828,12 +1839,26 @@ function makeStrategy(P,fixedN,title,opts){
     S.series.push({month:nm,value:portValue(S)});
     if(opts.sectors)pushSector(nm);
     const held=new Set(S.holdings.map(h=>h.sym));
-    inst.cands=stFilter(sc.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null).filter(r=>!held.has(r.symbol));
+    // The RSI box is a screening tool for picking the opening list. Carrying it into
+    // every rebalance freezes the strategy the moment the market cools below it, so
+    // unless "keep as a filter" is ticked we rank the whole universe on monthly RSI
+    // and simply take the best name outside the portfolio.
+    const rLim=S.rlock?(S.rmin!==undefined?S.rmin:null):null;
+    inst.cands=stFilter(sc.rows,rLim,S.mmin!==undefined?S.mmin:null).filter(r=>!held.has(r.symbol));
     const n=fixedN||Math.max(1,Math.min(+($('N')?$('N').value:1)||1,10));
     const k=Math.min(n,S.holdings.length,inst.cands.length);
     const outSorted=[...S.holdings].sort((a,b)=>((a.rsi??-1))-((b.rsi??-1)));
-    let html='';
+    // a swap has to be an upgrade: the incoming monthly RSI must beat the outgoing one
+    let usable=0;
     for(let i=0;i<k;i++){
+      const outR=outSorted[i]&&outSorted[i].rsi, inR=inst.cands[i]&&inst.cands[i].rsi_m;
+      if(inR==null)break;
+      if(outR!=null&&inR<=outR)break;
+      usable++;
+    }
+    const kk=usable;
+    let html='';
+    for(let i=0;i<kk;i++){
       html+=`<div class="row"><div><label>Share out #${i+1} (sell)</label><select class="${P}OutSel">`+
         outSorted.map((h,j)=>`<option value="${h.sym}"${j===i?' selected':''}>${h.sym}${h.sector?' · '+h.sector:''} (RSI ${h.rsi==null?'—':fmt(h.rsi)})</option>`).join('')+
         `</select></div><div><label>Share in #${i+1} (buy with proceeds)</label><select class="${P}InSel">`+
@@ -1842,10 +1867,23 @@ function makeStrategy(P,fixedN,title,opts){
         (opts.sectors?`<div><label>Sector for incoming</label><select class="${P}SecSel">${S.sectorNames.map(n=>`<option value="${n}"${outSorted[i]&&n===outSorted[i].sector?' selected':''}>${n}</option>`).join('')}</select></div>`:'')+
         `</div>`;
     }
-    $('Swaps').innerHTML=k?html:'<div class="status warn">No qualifying candidates this month.</div>';
+    const filt=`Min monthly RSI ${S.rmin==null?'—':S.rmin}, Min mcap ${S.mmin?'₹'+fmt0(S.mmin)+' cr':'—'}`;
+    inst.skipWhy=kk?null:(inst.cands.length===0
+        ? `nothing outside the portfolio passed your filters (${filt}) — ${sc.rows.length} shares were in the file`
+        : (k&&!kk
+           ? `the best share outside the portfolio is ${inst.cands[0].symbol} at monthly RSI `+
+             `${fmt(inst.cands[0].rsi_m,1)}, which is no better than your weakest holding `+
+             `${outSorted[0].sym} at ${outSorted[0].rsi==null?'—':fmt(outSorted[0].rsi,1)}`
+           : `only ${S.holdings.length} holding(s) to swap out of`));
+    $('Swaps').innerHTML=kk?html:
+      `<div class="status warn">No qualifying candidate — ${inst.skipWhy}.</div>`;
     $('SwapRow').classList.remove('hidden');
     $('NextBtn').disabled=true;
-    inst.render(`${opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — set the ${k||0} change(s) or skip.`);
+    inst.render(`${opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — `+
+      (kk?`set the ${kk} change(s) or skip. ${inst.cands.length} candidate(s) ranked on monthly RSI, best is `+
+         `${inst.cands[0].symbol} at ${fmt(inst.cands[0].rsi_m,1)} vs your weakest holding `+
+         `${outSorted[0].sym} at ${outSorted[0].rsi==null?'—':fmt(outSorted[0].rsi,1)}.`
+        :`no change possible — ${inst.skipWhy}.`));
   };
 
   inst.apply=function(doSwap){
@@ -1888,8 +1926,9 @@ function makeStrategy(P,fixedN,title,opts){
         S.holdings.push(nh);
         usedOut.add(o); usedIn.add(nsym);
       }
-      if(!usedOut.size)S.log.push({month:S.month,out:null,inSym:null});
-    } else S.log.push({month:S.month,out:null,inSym:null});
+      if(!usedOut.size)S.log.push({month:S.month,out:null,inSym:null,
+        why:inst.skipWhy||'the default swap could not be applied'});
+    } else S.log.push({month:S.month,out:null,inSym:null,why:'you chose no change'});
     if(opts.sectors&&S.sectorSeries){
       S.sectorNames.forEach(n=>{(S.sectorSeries[n]=S.sectorSeries[n]||{})[S.month]=
         S.holdings.filter(h=>h.sector===n).reduce((s,h)=>s+h.units*h.lastClose,0);});
@@ -2063,7 +2102,8 @@ function makeStrategy(P,fixedN,title,opts){
         `<tr><td>${l.month}</td><td style="text-align:left"><b>${l.inSym}</b>${l.inSector?` <span style="color:var(--muted);font-size:11px">(${l.inSector})</span>`:''}</td><td>${fmt(l.inPrice)}</td>`+
         `<td style="text-align:left"><b>${l.out}</b>${l.outSector?` <span style="color:var(--muted);font-size:11px">(${l.outSector})</span>`:''}</td><td>${fmt(l.outSell)}</td>`+
         `<td class="${l.pnl>=0?'pos':'neg'}">${l.pnl>=0?'+':''}${fmt(l.pnl)}%</td><td>${fmt0(l.amount)}</td></tr>`:
-        `<tr><td>${l.month}</td><td colspan="6" style="text-align:left;color:var(--muted)">no change</td></tr>`).join('');
+        `<tr><td>${l.month}</td><td colspan="6" style="text-align:left;color:var(--muted)">no change`+
+        (l.why?` <span style="opacity:.75">— ${l.why}</span>`:'')+`</td></tr>`).join('');
   };
 
   inst.download=function(){
@@ -2098,7 +2138,7 @@ function makeStrategy(P,fixedN,title,opts){
       XLSX.utils.book_append_sheet(wb,ws3,'Holdings');
       const log=[['Month','Share In','Buy @','Share Out','Sold @','Out P&L %','Amount ₹']].concat(
         S.log.map(l=>l.out?[l.month,l.inSym,+l.inPrice.toFixed(2),l.out,+l.outSell.toFixed(2),+l.pnl.toFixed(2),Math.round(l.amount)]
-                          :[l.month,'— no change —','','','','','']));
+                          :[l.month,'— no change —',l.why||'','','','','']));
       const ws4=XLSX.utils.aoa_to_sheet(log); ws4['!cols']=[{wch:10},{wch:15},{wch:11},{wch:15},{wch:11},{wch:11},{wch:12}];
       XLSX.utils.book_append_sheet(wb,ws4,'Share In-Out Log');
       const fname=`${P==='mc'?'multi':P==='ac'?'all':P==='sx'?'sector':'one'}_change_strategy_${S.screenDate}_to_${S.month}.xlsx`;
