@@ -833,7 +833,7 @@ a{color:var(--accent);}
 
 <!-- DAILY P&L TRACKER -->
 <div class="card" id="pane-pl">
-  <div class="section-head">Daily P&L — every running strategy</div>
+  <div class="section-head">Daily P&L — my holdings</div>
   <div class="row">
     <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
     <button onclick="plRefresh()">Refresh</button>
@@ -3374,7 +3374,9 @@ function mrDownload(kind){
 
 /* ============ daily P&L tracker ============ */
 // distinct, bright, and deliberately NOT green — the ₹ figures are already green/red
-const PLDEFS=[['ta','All Change','#22d3ee'],['t3','Multi Change','#c084fc'],['tw','Weekly Change','#fbbf24']];
+/* The Daily P&L page tracks the shares actually bought. Multi Change is still
+   available under Strategies (tracked) — it just isn't part of this page. */
+const PLDEFS=[['ta','All Change Holding','#22d3ee'],['tw','Weekly Change Holding','#fbbf24']];
 let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null,
     PLHOLDSEL=null, PLHOLDSORT={key:'value',dir:-1};
 function plInit(){ if(!PLDATA)plRefresh(); }
