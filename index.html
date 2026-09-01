@@ -858,6 +858,9 @@ a{color:var(--accent);}
         <option value="days">Last N days</option>
       </select></div>
     <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
+    <div><label>Min Mcap for the next change (₹ cr)</label>
+      <input type="number" id="plMc" style="width:130px" placeholder="e.g. 3000"
+             oninput="plMcSave()" title="Only shares at least this big are offered as the incoming share"></div>
     <button onclick="plRefresh()">Refresh</button>
     <button class="ghost" onclick="plSyncPrices()">🔄 Sync prices to latest close</button>
     <button class="ghost" onclick="plFixCA()">✂️ Fix splits &amp; bonuses</button>
@@ -3363,7 +3366,7 @@ function mrDownload(kind){
 const PLDEFS=[['ta','All Change Holding','#22d3ee'],['tw','Weekly Change Holding','#fbbf24']];
 let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null, PLFROM=null,
     PLHOLDSEL=null, PLHOLDSORT={key:'value',dir:-1};
-function plInit(){ if(!PLDATA)plRefresh(); }
+function plInit(){ plMcRestore(); if(!PLDATA)plRefresh(); }
 async function plRefresh(){
   if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
   const live=PLDEFS.filter(([p])=>STRATS[p]&&STRATS[p].S&&STRATS[p].S.holdings&&STRATS[p].S.holdings.length);
@@ -3533,6 +3536,23 @@ function myHoldSchedule(P){
 /* ---- probable next change: who is weakest inside, who is strongest outside ----
    Same rule the Next button uses: sell the holding with the LOWEST Monthly RSI,
    buy the highest Monthly RSI share that passes the strategy's own filters.     */
+function plMcVal(){
+  const e=document.getElementById('plMc');
+  if(!e||e.value==='')return null;
+  const v=+e.value;
+  return (v>0)?v:null;
+}
+function plMcSave(){
+  try{localStorage.setItem('pl_mc',document.getElementById('plMc').value||'');}catch(e){}
+  if(PLDATA)plRender();
+}
+function plMcRestore(){
+  try{
+    const v=localStorage.getItem('pl_mc');
+    const e=document.getElementById('plMc');
+    if(e&&v!=null)e.value=v;
+  }catch(e){}
+}
 function plProbable(p){
   const S=STRATS[p]&&STRATS[p].S;
   if(!S||!S.holdings||!S.holdings.length||!PLLAST||!PLLAST.rows)return null;
@@ -3540,11 +3560,15 @@ function plProbable(p){
   const held=new Set(S.holdings.map(h=>h.sym));
   const outs=S.holdings.map(h=>({sym:h.sym,rsi:rsiOf(h.sym)}))
     .sort((a,b)=>((a.rsi==null?-1:a.rsi))-((b.rsi==null?-1:b.rsi)));
-  const ins=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null)
+  // the box on this page wins; otherwise fall back to whatever the strategy was screened with
+  const pmc=plMcVal();
+  const mmin=(pmc!=null)?pmc:(S.mmin!==undefined?S.mmin:null);
+  const ins=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,mmin)
     .filter(r=>!held.has(r.symbol)).slice(0,4)
-    .map(r=>({sym:r.symbol,rsi:r.rsi_m}));
+    .map(r=>({sym:r.symbol,rsi:r.rsi_m,mc:r.mcap_cr}));
   if(!outs.length||!ins.length)return null;
-  return {out:outs[0],outNext:outs.slice(1,3),in:ins[0],inNext:ins.slice(1,3),date:PLLAST.date};
+  return {out:outs[0],outNext:outs.slice(1,3),in:ins[0],inNext:ins.slice(1,3),
+          date:PLLAST.date,mmin};
 }
 /* ---- per-share breakdown, so every card can be checked line by line ---- */
 function plHoldRows(p){
@@ -3790,13 +3814,13 @@ function plRender(){
     const probHtml=!pr?'':`
       <div style="margin-top:8px;padding-top:7px;border-top:1px dashed ${s.color}44">
         <div style="font-size:11px;color:var(--muted);letter-spacing:.3px">PROBABLE NEXT CHANGE
-          <span style="opacity:.7">· Monthly RSI as on ${pr.date}</span></div>
+          <span style="opacity:.7">· Monthly RSI as on ${pr.date}${pr.mmin?' · mcap ≥ ₹'+fmt0(pr.mmin)+' cr':''}</span></div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:12.5px;flex-wrap:wrap">
           <span class="neg" style="font-weight:600">OUT ${symCell(pr.out.sym,pr.date)}</span>
           <span style="color:var(--muted)">${rq(pr.out)}</span>
           <span style="color:${s.color};font-weight:700">&rarr;</span>
           <span class="pos" style="font-weight:600">IN ${symCell(pr.in.sym,pr.date)}</span>
-          <span style="color:var(--muted)">${rq(pr.in)}</span>
+          <span style="color:var(--muted)">${rq(pr.in)}${pr.in.mc!=null?' · ₹'+fmt0(pr.in.mc)+' cr':''}</span>
         </div>
         ${(pr.outNext.length||pr.inNext.length)?`<div style="font-size:11px;color:var(--muted);margin-top:3px">
           then out: ${pr.outNext.map(x=>x.sym+' '+rq(x)).join(', ')||'—'}
