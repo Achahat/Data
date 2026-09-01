@@ -109,7 +109,7 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">Data ▾</button>
       <div class="nav-drop"><a data-pane="dl">Raw Data</a><a data-pane="mm">Multi Month Data</a><a data-pane="mr">RSI Count</a></div></div>
     <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
-      <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="t3">Multi Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
+      <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
       <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
@@ -706,6 +706,23 @@ a{color:var(--accent);}
       <button class="ghost hidden" id="twStartBtn" onclick="STRATS.tw.start()">Start strategy with selected ▶</button>
     </div>
     <div class="status" id="twSetupStatus">This is the tracked copy — it feeds the Daily P&L home page, so leave it alone once it is running and experiment in the RSI Strategy version instead.</div>
+    <div class="subcard" style="margin-top:10px;border-left:3px solid #fbbf24">
+      <div class="section-head" style="font-size:14px">Or track the shares I actually bought</div>
+      <div class="row">
+        <div><label>Bought on</label><input type="date" id="twMyDate"></div>
+        <button onclick="myHoldStart('tw')">Track from this date ▶</button>
+        <button class="ghost" onclick="myHoldFill('tw')">Fill from current holdings</button>
+      </div>
+      <label style="margin-top:6px">One share per line — SYMBOL then quantity</label>
+      <textarea id="twMyList" rows="6" spellcheck="false"
+        style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;
+               background:#0f131b;color:#dfe6f2;border:1px solid #2a3242;border-radius:8px;padding:8px"
+        placeholder="TFCILTD 120&#10;AIMTRON 45&#10;RADICO 60"></textarea>
+      <div class="status" id="twMyStatus">Buy price is that date's close for each share. This replaces whatever is
+        currently saved for this strategy, then walks it forward to today so you can see every change that was due.</div>
+      <div id="twMySched" style="margin-top:8px"></div>
+    </div>
+
     <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('tw',true)">Select all</button>
       <button class="ghost mini" onclick="pickAll('tw',false)">Unselect all</button><span class="pill" id="twPickCount"></span></div>
     <div class="tblwrap"><table id="twPickTbl"></table></div>
@@ -835,6 +852,11 @@ a{color:var(--accent);}
 <div class="card" id="pane-pl">
   <div class="section-head">Daily P&L — my holdings</div>
   <div class="row">
+    <div><label>Show</label>
+      <select id="plSpan" onchange="plRefresh()" style="width:170px">
+        <option value="start">Since I bought</option>
+        <option value="days">Last N days</option>
+      </select></div>
     <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
     <button onclick="plRefresh()">Refresh</button>
     <button class="ghost" onclick="plSyncPrices()">🔄 Sync prices to latest close</button>
@@ -881,6 +903,23 @@ a{color:var(--accent);}
       <button id="taCont" class="hidden" onclick="acContinue('ta')">▶ Continue</button>
     </div>
     <div class="status" id="taSetupStatus">Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.</div>
+    <div class="subcard" style="margin-top:10px;border-left:3px solid #22d3ee">
+      <div class="section-head" style="font-size:14px">Or track the shares I actually bought</div>
+      <div class="row">
+        <div><label>Bought on</label><input type="date" id="taMyDate"></div>
+        <button onclick="myHoldStart('ta')">Track from this date ▶</button>
+        <button class="ghost" onclick="myHoldFill('ta')">Fill from current holdings</button>
+      </div>
+      <label style="margin-top:6px">One share per line — SYMBOL then quantity</label>
+      <textarea id="taMyList" rows="6" spellcheck="false"
+        style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;
+               background:#0f131b;color:#dfe6f2;border:1px solid #2a3242;border-radius:8px;padding:8px"
+        placeholder="TFCILTD 120&#10;AIMTRON 45&#10;RADICO 60"></textarea>
+      <div class="status" id="taMyStatus">Buy price is that date's close for each share. This replaces whatever is
+        currently saved for this strategy, then walks it forward to today so you can see every change that was due.</div>
+      <div id="taMySched" style="margin-top:8px"></div>
+    </div>
+
     <div class="hidden"><table id="taPickTbl"></table><button id="taStartBtn"></button></div>
   </div>
   <div id="taRun" class="hidden">
@@ -967,62 +1006,6 @@ a{color:var(--accent);}
     </div>
   </div>
 </div>
-<div class="card hidden" id="pane-t3">
-  <div class="section-head">Multi Change — top N by monthly RSI, you choose how many swaps per month</div>
-  <div id="t3Setup">
-    <div class="row">
-      <div><label>Start date</label><input type="date" id="t3Date"></div>
-      <div><label>Top shares by Monthly RSI</label><input type="number" id="t3Top" style="width:100px" value="30" min="1" max="300"></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="t3Mc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" placeholder="e.g. 100000"></div>
-      <div><label>Changes per month</label><input type="number" id="t3N" style="width:90px" value="2" min="1" max="10"></div>
-      <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t3NextM"></div>
-      <button onclick="STRATS.t3.screen()">Screen shares</button>
-      <button class="ghost hidden" id="t3StartBtn" onclick="STRATS.t3.start()">Start strategy with selected ▶</button>
-    </div>
-    <div class="status" id="t3SetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
-    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('t3',true)">Select all</button>
-      <button class="ghost mini" onclick="pickAll('t3',false)">Unselect all</button><span class="pill" id="t3PickCount"></span></div>
-    <div class="tblwrap"><table id="t3PickTbl"></table></div>
-  </div>
-  <div id="t3Run" class="hidden">
-    <div class="row" style="justify-content:space-between">
-      <div class="status" id="t3Head" style="font-size:14px"></div>
-      <div>
-        <button id="t3NextBtn" onclick="STRATS.t3.advance()">Next month ▶</button>
-        <button class="ghost" id="t3RunAllBtn" onclick="STRATS.t3.runTillToday()">⏩ Run till today</button>
-        <input type="date" id="t3RunTo" style="width:150px" title="run only up to this date">
-        <button class="ghost" onclick="STRATS.t3.runTill()">⏩ Run till date</button>
-        <button class="ghost" onclick="STRATS.t3.download()">⬇ Download report</button>
-        <button class="ghost" onclick="saveRun('t3')">💾 Save run</button>
-        <button class="ghost" onclick="STRATS.t3.reset()">↺ New strategy</button>
-      </div>
-    </div>
-    <div class="hidden" id="t3SwapRow">
-      <div id="t3Swaps"></div>
-      <div class="row">
-        <button onclick="STRATS.t3.apply(true)">Apply changes</button>
-        <button class="ghost" onclick="STRATS.t3.apply(false)">No change this month</button>
-      </div>
-    </div>
-    <div class="chartbox" style="height:300px"><canvas id="t3Chart"></canvas></div>
-    <div class="chartbox" style="height:210px;margin-top:10px">
-      <button class="chart-nav prev" onclick="panBars('mc',2,-1)">◀</button>
-      <button class="chart-nav next" onclick="panBars('mc',2,1)">▶</button>
-      <canvas id="t3Chart2"></canvas></div>
-    <div class="row" id="t3Insights" style="margin-top:12px;gap:22px"></div>
-    <div class="subcard">
-      <div class="section-head">Holdings</div>
-      <div class="tblwrap" style="max-height:260px"><table id="t3HoldTbl"></table></div>
-    </div>
-    <div class="subcard">
-      <div class="section-head">Share In / Share Out — monthly log</div>
-      <div class="tblwrap" style="max-height:240px"><table id="t3LogTbl"></table></div>
-    </div>
-  </div>
-</div>
-
-<!-- CHART -->
 <div class="card hidden" id="pane-chart">
  <div class="chart-flex">
  <div class="chart-main">
@@ -1225,7 +1208,7 @@ async function syncSharedRuns(){
   }
   if(added){try{putRuns(local);}catch(e){}}
   // if this device has no live run for a strategy, adopt the newest shared one
-  ['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>{
+  ['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>{
     const r=newest[p];
     if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
       try{
@@ -1296,7 +1279,8 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
+  try{localStorage.removeItem('strat_t3');}catch(e){}   // Multi Change (tracked) was removed
+  try{['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
@@ -1428,7 +1412,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -2158,7 +2142,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),t3:makeStrategy('t3',null,'Tracked Multi Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -3025,7 +3009,7 @@ function shDownload(kind){
 }
 
 /* ============ saved runs ============ */
-const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ta:'Tracked All Change',t1:'Tracked One Change',t3:'Tracked Multi Change',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
+const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ta:'Tracked All Change',t1:'Tracked One Change',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
 // ---- MEGA-synced folder handle (persisted in IndexedDB) ----
 function idbKV(){return new Promise((res,rej)=>{const q=indexedDB.open('btp',1);
   q.onupgradeneeded=()=>q.result.createObjectStore('kv');
@@ -3096,7 +3080,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -3124,7 +3108,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -3173,7 +3157,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -3204,7 +3188,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -3377,17 +3361,31 @@ function mrDownload(kind){
 /* The Daily P&L page tracks the shares actually bought. Multi Change is still
    available under Strategies (tracked) — it just isn't part of this page. */
 const PLDEFS=[['ta','All Change Holding','#22d3ee'],['tw','Weekly Change Holding','#fbbf24']];
-let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null,
+let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null, PLFROM=null,
     PLHOLDSEL=null, PLHOLDSORT={key:'value',dir:-1};
 function plInit(){ if(!PLDATA)plRefresh(); }
 async function plRefresh(){
   if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
   const live=PLDEFS.filter(([p])=>STRATS[p]&&STRATS[p].S&&STRATS[p].S.holdings&&STRATS[p].S.holdings.length);
   if(!live.length){setS('plStatus','No strategies running yet — start one (or open a saved run) and it will appear here.','warn');return;}
-  const N=Math.max(5,Math.min(+document.getElementById('plDays').value||30,120));
   const all=await getScanDates();
   if(!all||!all.length){setS('plStatus','Scan index unavailable.','warn');return;}
-  const dates=all.slice(-(N+1));
+  // When the holdings were entered with a buy date, track from that date rather
+  // than a rolling window - the P&L should cover exactly what you have owned.
+  const starts=live.map(([p])=>STRATS[p].S.startDate).filter(Boolean);
+  const from=starts.length?starts.sort()[0]:null;
+  const spanEl=document.getElementById('plSpan');
+  const useStart=from&&(!spanEl||spanEl.value==='start');
+  let dates;
+  if(useStart){
+    const i=all.indexOf(from);
+    dates=i>0?all.slice(i-1):all.slice(all.indexOf(from));   // one day before, for the first % move
+    if(dates.length<2)dates=all.slice(-2);
+  }else{
+    const N=Math.max(5,Math.min(+document.getElementById('plDays').value||30,200));
+    dates=all.slice(-(N+1));
+  }
+  PLFROM=useStart?from:null;
   const maps=[];
   for(let i=0;i<dates.length;i++){
     setS('plStatus',`loading ${i+1}/${dates.length} days…`,'');
@@ -3418,10 +3416,120 @@ async function plRefresh(){
     return {p,label,color,vals,invested:S.invested,lastBuy,holdings:S.holdings.length};
   });
   PLMAPS=maps;
+  if(PLFROM)setS('plStatus','Tracking from '+PLFROM+' — the day you bought — through '+
+    maps[maps.length-1].date+' ('+(maps.length-1)+' trading days).','ok');
   PLDATA={dates:maps.map(d=>d.date),series,nifty};
   if(!PLHOLDSEL||!series.some(s=>s.p===PLHOLDSEL))PLHOLDSEL=series[0].p;
   plRender();
 }
+/* ============ My holdings: seed a tracked strategy from real purchases ============
+   You give a buy date and the shares you actually own, one per line as
+   "SYMBOL QTY".  The buy price is that date's close.  The strategy is then
+   walked forward to today, so every rebalance that was due since is listed with
+   its date, and the card shows the one coming next.                            */
+function myHoldParse(txt){
+  const out=[], bad=[];
+  (txt||'').split(/[\n;]+/).forEach(line=>{
+    const t=line.trim();
+    if(!t)return;
+    const m=t.match(/^([A-Za-z0-9&._\-]+)[\s,:]+([0-9]+(?:\.[0-9]+)?)$/);
+    if(!m){bad.push(t);return;}
+    const q=Math.floor(+m[2]);
+    if(!(q>0)){bad.push(t);return;}
+    out.push({sym:m[1].toUpperCase(),qty:q});
+  });
+  return {rows:out,bad};
+}
+function myHoldFill(P){
+  const S=STRATS[P]&&STRATS[P].S;
+  const box=document.getElementById(P+'MyList');
+  if(!S||!S.holdings||!S.holdings.length){setS(P+'MyStatus','Nothing is running yet to copy.','warn');return;}
+  box.value=S.holdings.map(h=>`${h.sym} ${Math.round(h.units)}`).join('\n');
+  setS(P+'MyStatus',`Copied ${S.holdings.length} holding(s). Edit the quantities, set the date, then track.`,'ok');
+}
+async function myHoldStart(P){
+  const weekly=(P==='tw');
+  const dEl=document.getElementById(P+'MyDate');
+  const want=dEl?dEl.value:'';
+  if(!want){setS(P+'MyStatus','Pick the date you bought them.','warn');return;}
+  const {rows,bad}=myHoldParse(document.getElementById(P+'MyList').value);
+  if(!rows.length){setS(P+'MyStatus','Type at least one line, e.g. TFCILTD 120.','warn');return;}
+  if(bad.length){setS(P+'MyStatus','Could not read: '+bad.slice(0,4).join(' · ')+
+      '. Each line must be SYMBOL then quantity.','warn');return;}
+  if(!MANIFEST){setS(P+'MyStatus','Not connected to data yet.','warn');return;}
+
+  setS(P+'MyStatus','loading prices for '+want+'…','');
+  const dates=await getScanDates();
+  if(!dates||!dates.length){setS(P+'MyStatus','Scan index unavailable.','warn');return;}
+  const sd=dates.filter(d=>d<=want).pop();
+  if(!sd){setS(P+'MyStatus','No trading day on or before '+want+'.','warn');return;}
+  const sc=parseScan(await fetchGz(`data/scan/${sd}.csv.gz`));
+  const map=new Map(sc.map(r=>[r.symbol,r]));
+
+  const holdings=[]; const missing=[];
+  let invested=0;
+  for(const r of rows){
+    const row=map.get(r.sym);
+    if(!row||!(row.close>0)){missing.push(r.sym);continue;}
+    const cost=r.qty*row.close;
+    holdings.push({sym:r.sym,units:r.qty,buyPrice:row.close,cost,lastClose:row.close,
+                   rsi:row.rsi_m,buyMonth:weekly?sd:sd.slice(0,7)});
+    invested+=cost;
+  }
+  if(!holdings.length){
+    setS(P+'MyStatus','None of those symbols traded on '+sd+'. Check the spelling — '+missing.slice(0,6).join(', '),'warn');
+    return;
+  }
+  const mcEl=document.getElementById(P+'Mc');
+  const S={screenDate:sd,rmin:null,mmin:(mcEl&&mcEl.value!=='')?+mcEl.value:null,
+           topN:holdings.length,amt:Math.round(invested/holdings.length),
+           holdings,log:[],series:[{month:weekly?sd:sd.slice(0,7),value:invested}],
+           month:weekly?sd:sd.slice(0,7),invested,cash:0,
+           startDate:sd,myHoldings:true};
+  STRATS[P].S=S;
+  try{
+    const nrows=await loadSeries('ix','NIFTY_50');
+    S.nifty={}; nrows.forEach(r=>{S.nifty[weekly?r.date:r.date.slice(0,7)]=r.close;});
+  }catch(e){S.nifty=null;}
+  S.niftyBase=S.nifty?S.nifty[S.month]:null;
+  document.getElementById(P+'Setup').classList.add('hidden');
+  document.getElementById(P+'Run').classList.remove('hidden');
+  const sw=document.getElementById(P+'SwapRow'); if(sw)sw.classList.add('hidden');
+  const nb=document.getElementById(P+'NextBtn'); if(nb)nb.disabled=false;
+  try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
+
+  setS(P+'MyStatus',`Bought ${holdings.length} share(s) on ${sd} for ₹${fmt0(invested)}`+
+    (missing.length?` · not found on that date: ${missing.join(', ')}`:'')+
+    ' — walking forward to today…','');
+  await STRATS[P].runTillToday();
+  const dueTxt=myHoldSchedule(P);
+  setS(P+'MyStatus',`Tracking from ${sd} · ₹${fmt0(invested)} in ${holdings.length} share(s)`+
+    (missing.length?` · skipped ${missing.join(', ')}`:'')+`. ${dueTxt}`,'ok');
+  PLDATA=null; PLMAPS=null;
+  try{ await plRefresh(); }catch(e){}
+}
+/* the changes that were due since the buy date, and the one coming next */
+function myHoldSchedule(P){
+  const S=STRATS[P]&&STRATS[P].S;
+  if(!S||!S.log)return '';
+  const made=S.log.filter(l=>l.out);
+  const box=document.getElementById(P+'MySched');
+  const weekly=(P==='tw');
+  if(box){
+    box.innerHTML=
+      '<div class="section-head" style="font-size:14px">Changes due since '+(S.startDate||'')+'</div>'+
+      (made.length?
+        '<table><tr><th>'+(weekly?'Week ending':'Month')+'</th><th style="text-align:left">Sell</th>'+
+        '<th>at ₹</th><th style="text-align:left">Buy</th><th>at ₹</th><th>Sold P&L</th></tr>'+
+        made.map(l=>`<tr><td>${l.month}</td><td style="text-align:left"><b>${l.out}</b></td>`+
+          `<td>${fmt(l.outSell)}</td><td style="text-align:left"><b>${l.inSym}</b></td>`+
+          `<td>${fmt(l.inPrice)}</td><td class="${l.pnl>=0?'pos':'neg'}">${l.pnl>=0?'+':''}${fmt(l.pnl)}%</td></tr>`).join('')+
+        '</table>'
+        :'<div class="status">No change was due in that stretch.</div>');
+  }
+  return made.length?`${made.length} change(s) were due — see the table.`:'No change was due yet.';
+}
+
 /* ---- probable next change: who is weakest inside, who is strongest outside ----
    Same rule the Next button uses: sell the holding with the LOWEST Monthly RSI,
    buy the highest Monthly RSI share that passes the strategy's own filters.     */
@@ -5110,7 +5218,8 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','t3Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','twDate']
+    .forEach(i=>{const e=document.getElementById(i); if(e)e.value=from.toISOString().slice(0,10);});
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
