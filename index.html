@@ -835,7 +835,6 @@ a{color:var(--accent);}
 <div class="card" id="pane-pl">
   <div class="section-head">Daily P&L — my holdings</div>
   <div class="row">
-    <div><label>Days to show</label><input type="number" id="plDays" style="width:90px" value="45" min="5" max="200"></div>
     <button onclick="plRefresh()">Refresh</button>
     <button class="ghost" onclick="plSyncPrices()">🔄 Sync prices to latest close</button>
     <button class="ghost" onclick="plFixCA()">✂️ Fix splits &amp; bonuses</button>
@@ -3384,10 +3383,23 @@ async function plRefresh(){
   if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
   const live=PLDEFS.filter(([p])=>STRATS[p]&&STRATS[p].S&&STRATS[p].S.holdings&&STRATS[p].S.holdings.length);
   if(!live.length){setS('plStatus','No strategies running yet — start one (or open a saved run) and it will appear here.','warn');return;}
-  const N=Math.max(5,Math.min(+document.getElementById('plDays').value||30,120));
   const all=await getScanDates();
   if(!all||!all.length){setS('plStatus','Scan index unavailable.','warn');return;}
-  const dates=all.slice(-(N+1));
+  // Track from day one: the first point of each running strategy is when it began.
+  // Take the earliest, and start one trading day before it so the first % move works.
+  const firsts=live.map(([p])=>{
+    const se=STRATS[p].S.series;
+    return (se&&se.length)?String(se[0].month):null;
+  }).filter(Boolean).sort();
+  let dates=all;
+  if(firsts.length){
+    const f=firsts[0];
+    const start=(f.length===7)?(all.find(d=>d.slice(0,7)===f)||all[0]):f;
+    const i=all.indexOf(start);
+    if(i>0)dates=all.slice(i-1);
+    else if(i===0)dates=all.slice(0);
+  }
+  if(dates.length<2)dates=all.slice(-2);
   const maps=[];
   for(let i=0;i<dates.length;i++){
     setS('plStatus',`loading ${i+1}/${dates.length} days…`,'');
@@ -3430,14 +3442,36 @@ function plProbable(p){
   if(!S||!S.holdings||!S.holdings.length||!PLLAST||!PLLAST.rows)return null;
   const rsiOf=sym=>{const v=PLLAST.rsi.get(sym);return v==null?null:v;};
   const held=new Set(S.holdings.map(h=>h.sym));
+  // holdings, weakest monthly RSI first
   const outs=S.holdings.map(h=>({sym:h.sym,rsi:rsiOf(h.sym)}))
     .sort((a,b)=>((a.rsi==null?-1:a.rsi))-((b.rsi==null?-1:b.rsi)));
-  const ins=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null)
-    .filter(r=>!held.has(r.symbol)).slice(0,4)
+  // the whole universe ranked, best monthly RSI first
+  const ranked=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null);
+  if(!outs.length||!ranked.length)return null;
+
+  // All Change rebuilds the Top-N every month, so several holdings can drop out at
+  // once. One Change / Weekly Change only ever swap a single name per period.
+  const many=!!(S.auto);
+  const topN=(S.auto&&S.auto.topN)||S.holdings.length;
+  const target=ranked.slice(0,topN);
+  const inTarget=new Set(target.map(r=>r.symbol));
+  const exits=many?outs.filter(h=>!inTarget.has(h.sym)):outs.slice();
+  const entries=(many?target:ranked).filter(r=>!held.has(r.symbol))
     .map(r=>({sym:r.symbol,rsi:r.rsi_m}));
-  if(!outs.length||!ins.length)return null;
-  return {out:outs[0],outNext:outs.slice(1,3),in:ins[0],inNext:ins.slice(1,3),date:PLLAST.date};
+
+  const changes=[];
+  const cap=many?Math.min(exits.length,entries.length):1;
+  for(let i=0;i<cap;i++){
+    const o=exits[i], n=entries[i];
+    if(!o||!n||n.rsi==null)break;
+    if(o.rsi!=null&&n.rsi<=o.rsi)break;   // only ever an upgrade
+    changes.push({out:o,in:n});
+  }
+  return {changes,due:changes.length>0,many,
+          out:outs[0],in:entries[0]||null,
+          date:PLLAST.date};
 }
+
 /* ---- per-share breakdown, so every card can be checked line by line ---- */
 function plHoldRows(p){
   const S=STRATS[p]&&STRATS[p].S;
@@ -3681,18 +3715,20 @@ function plRender(){
     const rq=x=>x.rsi==null?'—':fmt(x.rsi,1);
     const probHtml=!pr?'':`
       <div style="margin-top:8px;padding-top:7px;border-top:1px dashed ${s.color}44">
-        <div style="font-size:11px;color:var(--muted);letter-spacing:.3px">PROBABLE NEXT CHANGE
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.3px">PROBABLE NEXT CHANGE${pr.changes.length>1?'S ('+pr.changes.length+')':''}
           <span style="opacity:.7">· Monthly RSI as on ${pr.date}</span></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:12.5px;flex-wrap:wrap">
-          <span class="neg" style="font-weight:600">OUT ${symCell(pr.out.sym,pr.date)}</span>
-          <span style="color:var(--muted)">${rq(pr.out)}</span>
+        ${pr.due?pr.changes.map(c=>`<div style="display:flex;gap:8px;align-items:center;margin-top:4px;font-size:12.5px;flex-wrap:wrap">
+          <span class="neg" style="font-weight:600">OUT ${symCell(c.out.sym,pr.date)}</span>
+          <span style="color:var(--muted)">${rq(c.out)}</span>
           <span style="color:${s.color};font-weight:700">&rarr;</span>
-          <span class="pos" style="font-weight:600">IN ${symCell(pr.in.sym,pr.date)}</span>
-          <span style="color:var(--muted)">${rq(pr.in)}</span>
-        </div>
-        ${(pr.outNext.length||pr.inNext.length)?`<div style="font-size:11px;color:var(--muted);margin-top:3px">
-          then out: ${pr.outNext.map(x=>x.sym+' '+rq(x)).join(', ')||'—'}
-          &nbsp;·&nbsp; then in: ${pr.inNext.map(x=>x.sym+' '+rq(x)).join(', ')||'—'}</div>`:''}
+          <span class="pos" style="font-weight:600">IN ${symCell(c.in.sym,pr.date)}</span>
+          <span style="color:var(--muted)">${rq(c.in)}</span>
+        </div>`).join('')
+        :`<div style="margin-top:4px;font-size:12.5px">
+          <span style="font-weight:600;color:var(--muted)">No change due</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">
+            your weakest holding ${pr.out.sym} ${rq(pr.out)} still ranks above the best
+            share outside ${pr.in?pr.in.sym+' '+rq(pr.in):'—'}</div></div>`}
       </div>`;
     return `<div class="subcard" style="flex:1;min-width:190px;margin-top:0;position:relative;overflow:hidden;
         border-left:3px solid ${s.color};
@@ -3748,7 +3784,7 @@ function plRender(){
     }).join('');
   const now=new Date().toISOString().slice(0,10);
   const stale=dates[d0]<now;
-  setS('plStatus',`Data as of ${dates[d0]}${stale?` (today's file arrives after 6:30 PM)`:''} · this month measured from ${dates[baseIdx]} close · last ${labels.length} trading days · valued on current holdings.`,'ok');
+  setS('plStatus',`Data as of ${dates[d0]}${stale?` (today's file arrives after 6:30 PM)`:''} · this month measured from ${dates[baseIdx]} close · tracked from ${dates[1]||dates[0]} (${labels.length} trading days) · valued on current holdings.`,'ok');
   try{plHoldRender();}catch(e){}
 }
 function plDownload(){
