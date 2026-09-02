@@ -109,7 +109,7 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">Data ▾</button>
       <div class="nav-drop"><a data-pane="dl">Raw Data</a><a data-pane="mm">Multi Month Data</a><a data-pane="mr">RSI Count</a></div></div>
     <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
-      <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="t3">Multi Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
+      <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
       <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
@@ -303,14 +303,7 @@ a{color:var(--accent);}
   <div class="section-head">All Change — automatic Top-N RSI portfolio, rebalanced monthly</div>
   <div id="acSetup">
     <div class="row">
-      <div><label>Start month</label>
-        <select id="acMonth">
-          <option value="01">January</option><option value="02">February</option><option value="03" selected>March</option>
-          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
-          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
-          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-        </select></div>
-      <div><label>Start year</label><select id="acYear"></select></div>
+      <div><label>Start date</label><input type="date" id="acDate" style="width:150px"></div>
       <div><label>End month (blank = today)</label>
       <select id="acEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
     <div><label>End year</label><select id="acEndYear"><option value="">—</option></select></div>
@@ -862,14 +855,7 @@ a{color:var(--accent);}
   <div class="section-head">All Change — automatic Top-N RSI portfolio, rebalanced monthly</div>
   <div id="taSetup">
     <div class="row">
-      <div><label>Start month</label>
-        <select id="taMonth">
-          <option value="01">January</option><option value="02">February</option><option value="03" selected>March</option>
-          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
-          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
-          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-        </select></div>
-      <div><label>Start year</label><select id="taYear"></select></div>
+      <div><label>Start date</label><input type="date" id="taDate" style="width:150px"></div>
       <div><label>End month (blank = today)</label>
       <select id="taEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
     <div><label>End year</label><select id="taEndYear"><option value="">—</option></select></div>
@@ -966,62 +952,6 @@ a{color:var(--accent);}
     </div>
   </div>
 </div>
-<div class="card hidden" id="pane-t3">
-  <div class="section-head">Multi Change — top N by monthly RSI, you choose how many swaps per month</div>
-  <div id="t3Setup">
-    <div class="row">
-      <div><label>Start date</label><input type="date" id="t3Date"></div>
-      <div><label>Top shares by Monthly RSI</label><input type="number" id="t3Top" style="width:100px" value="30" min="1" max="300"></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="t3Mc" style="width:110px" placeholder="e.g. 1000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="t3Amt" style="width:120px" placeholder="e.g. 100000"></div>
-      <div><label>Changes per month</label><input type="number" id="t3N" style="width:90px" value="2" min="1" max="10"></div>
-      <div class="row" style="margin:0"><label style="margin-right:4px">Buy at next month's close</label><input type="checkbox" id="t3NextM"></div>
-      <button onclick="STRATS.t3.screen()">Screen shares</button>
-      <button class="ghost hidden" id="t3StartBtn" onclick="STRATS.t3.start()">Start strategy with selected ▶</button>
-    </div>
-    <div class="status" id="t3SetupStatus">Screen, tick the shares you want in the starting portfolio, then start.</div>
-    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('t3',true)">Select all</button>
-      <button class="ghost mini" onclick="pickAll('t3',false)">Unselect all</button><span class="pill" id="t3PickCount"></span></div>
-    <div class="tblwrap"><table id="t3PickTbl"></table></div>
-  </div>
-  <div id="t3Run" class="hidden">
-    <div class="row" style="justify-content:space-between">
-      <div class="status" id="t3Head" style="font-size:14px"></div>
-      <div>
-        <button id="t3NextBtn" onclick="STRATS.t3.advance()">Next month ▶</button>
-        <button class="ghost" id="t3RunAllBtn" onclick="STRATS.t3.runTillToday()">⏩ Run till today</button>
-        <input type="date" id="t3RunTo" style="width:150px" title="run only up to this date">
-        <button class="ghost" onclick="STRATS.t3.runTill()">⏩ Run till date</button>
-        <button class="ghost" onclick="STRATS.t3.download()">⬇ Download report</button>
-        <button class="ghost" onclick="saveRun('t3')">💾 Save run</button>
-        <button class="ghost" onclick="STRATS.t3.reset()">↺ New strategy</button>
-      </div>
-    </div>
-    <div class="hidden" id="t3SwapRow">
-      <div id="t3Swaps"></div>
-      <div class="row">
-        <button onclick="STRATS.t3.apply(true)">Apply changes</button>
-        <button class="ghost" onclick="STRATS.t3.apply(false)">No change this month</button>
-      </div>
-    </div>
-    <div class="chartbox" style="height:300px"><canvas id="t3Chart"></canvas></div>
-    <div class="chartbox" style="height:210px;margin-top:10px">
-      <button class="chart-nav prev" onclick="panBars('mc',2,-1)">◀</button>
-      <button class="chart-nav next" onclick="panBars('mc',2,1)">▶</button>
-      <canvas id="t3Chart2"></canvas></div>
-    <div class="row" id="t3Insights" style="margin-top:12px;gap:22px"></div>
-    <div class="subcard">
-      <div class="section-head">Holdings</div>
-      <div class="tblwrap" style="max-height:260px"><table id="t3HoldTbl"></table></div>
-    </div>
-    <div class="subcard">
-      <div class="section-head">Share In / Share Out — monthly log</div>
-      <div class="tblwrap" style="max-height:240px"><table id="t3LogTbl"></table></div>
-    </div>
-  </div>
-</div>
-
-<!-- CHART -->
 <div class="card hidden" id="pane-chart">
  <div class="chart-flex">
  <div class="chart-main">
@@ -1224,7 +1154,7 @@ async function syncSharedRuns(){
   }
   if(added){try{putRuns(local);}catch(e){}}
   // if this device has no live run for a strategy, adopt the newest shared one
-  ['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>{
+  ['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>{
     const r=newest[p];
     if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
       try{
@@ -1295,7 +1225,7 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{['st','mc','ac','wk','sx','ta','t1','t3','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
+  try{['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
@@ -1427,7 +1357,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','t3','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
   ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
@@ -2157,7 +2087,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),t3:makeStrategy('t3',null,'Tracked Multi Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -2394,7 +2324,9 @@ const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc'
 
 async function acRun(P){
   P=P||'ac';
-  const start=document.getElementById(P+'Year').value+'-'+document.getElementById(P+'Month').value;
+  const dEl=document.getElementById(P+'Date');
+  if(!dEl||!dEl.value){setS(P+'SetupStatus','Pick a start date.','warn');return;}
+  const start=dEl.value.slice(0,7);          // the strategy still rebalances monthly
   const topN=Math.max(2,Math.min(+document.getElementById(P+'N').value||25,100));
   const mcMin=+document.getElementById(P+'Mc').value||0;   // blank = no market-cap floor
   const amtRaw=document.getElementById(P+'Amt').value;
@@ -3024,7 +2956,7 @@ function shDownload(kind){
 }
 
 /* ============ saved runs ============ */
-const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ta:'Tracked All Change',t1:'Tracked One Change',t3:'Tracked Multi Change',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
+const RUNLABELS={st:'One Change',mc:'Multi Change',ac:'All Change',wk:'Weekly Change',sx:'Sector Strategy',ta:'Tracked All Change',t1:'Tracked One Change',ss:'RSI+Stoch Scan',sh:'Blow-off Short'};
 // ---- MEGA-synced folder handle (persisted in IndexedDB) ----
 function idbKV(){return new Promise((res,rej)=>{const q=indexedDB.open('btp',1);
   q.onupgradeneeded=()=>q.result.createObjectStore('kv');
@@ -3095,7 +3027,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -3123,7 +3055,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -3172,7 +3104,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -3203,7 +3135,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','t3','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -5146,7 +5078,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','t3Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
@@ -5171,10 +5103,9 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
     for(let yy=cy;yy>=1998;yy--){const o=document.createElement('option');o.value=yy;o.textContent=yy;e.appendChild(o);}
     e.value='';
   });
-  ['acYear','taYear'].forEach(id=>{
-    const ays=document.getElementById(id); if(!ays)return;
-    for(let y=cy;y>=1998;y--){const o=document.createElement('option');o.value=y;o.textContent=y;ays.appendChild(o);}
-    ays.value=2020;
+  ['acDate','taDate'].forEach(id=>{
+    const e=document.getElementById(id); if(!e)return;
+    e.value='2020-03-01';
   });
 })();
 try{ssTfLabels();dlTfLabels();rsiOpUI('mm');rsiOpUI('mr');}catch(e){}
