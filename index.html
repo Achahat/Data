@@ -3338,10 +3338,17 @@ async function plRefresh(){
   // Track from day one: the first point of each running strategy is when it began.
   // Take the earliest, and start one trading day before it so the first % move works.
   const startOf=p=>{
-    const se=STRATS[p].S.series;
+    const S=STRATS[p].S;
+    // screenDate is the exact trading day the first shares were bought. Falling back
+    // to the month would say 3-Aug for a run started on 31-Aug and show four weeks
+    // of days you never held anything.
+    if(S.screenDate)return String(S.screenDate);
+    const se=S.series;
     if(!se||!se.length)return null;
     const f=String(se[0].month);
-    return (f.length===7)?(all.find(d=>d.slice(0,7)===f)||null):f;   // month -> its first trading day
+    if(f.length>7)return f;                       // weekly runs already store a date
+    const inMonth=all.filter(d=>d.slice(0,7)===f);
+    return inMonth.length?inMonth[inMonth.length-1]:null;   // month-end, when it rebalances
   };
   const STARTS={}; live.forEach(([p])=>{STARTS[p]=startOf(p);});
   const firsts=live.map(([p])=>STARTS[p]).filter(Boolean).sort();
@@ -3725,7 +3732,7 @@ function plRender(){
   const t=document.getElementById('plTbl');
   t.innerHTML='<tr><th style="text-align:left">Date</th>'+
     series.map(s=>`<th>${s.label}</th>`).join('')+'<th>NIFTY 50</th></tr>'+
-    labels.map((d,i)=>i).reverse().map(i=>{
+    labels.map((d,i)=>i).reverse().filter(i=>series.some(s=>s.vals[i]!=null&&s.vals[i+1]!=null)).map(i=>{
       const cells=series.map(s=>{
         const a=s.vals[i],b=s.vals[i+1];
         if(a==null||b==null)return '<td>—</td>';
