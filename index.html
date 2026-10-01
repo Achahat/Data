@@ -321,6 +321,7 @@ a{color:var(--accent);}
       <div class="status" id="acHead" style="font-size:14px"></div>
       <div>
         <button id="acNextBtn" class="hidden"></button>
+        <button class="ghost" id="acTillBtn" onclick="acTillToday('ac')">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.ac.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('ac')">💾 Save run</button>
         <button class="ghost" onclick="acReset()">↺ New run</button>
@@ -1663,7 +1664,10 @@ function makeStrategy(P,fixedN,title,opts){
       inst.S=S;
       $('Setup').classList.add('hidden'); $('Run').classList.remove('hidden');
       $('SwapRow').classList.add('hidden'); $('NextBtn').disabled=false;
-      inst.render('restored — press Next to continue');
+      // the auto-run panes have no Next button - they carry on by the month
+      const auto=!!document.getElementById(P+'Cont');
+      inst.render(auto?'restored — press Run till today to carry on':'restored — press Next to continue');
+      if(auto&&typeof acBtns==='function')acBtns(P);
     }catch(e){}
   };
 
@@ -2481,6 +2485,35 @@ async function acContinue(P){
   P=P||'ac';
   const S=STRATS[P]&&STRATS[P].S;
   if(!S||!S.auto){setS(P+'SetupStatus','Nothing to continue.','warn');return;}
+  await acLoop(P);
+}
+/* Carry a finished or restored run forward to the newest completed month.
+   A run saved in August is still sitting at August when it is reloaded in
+   October; this walks it the rest of the way without starting over. */
+async function acTillToday(P){
+  P=P||'ac';
+  const S=STRATS[P]&&STRATS[P].S;
+  if(!S||!S.month){setS(P+'SetupStatus','Nothing to run — start a run first.','warn');return;}
+  // a run that was stopped part-way still has months queued: just resume it
+  if(S.auto&&S.auto.months&&S.auto.i<S.auto.months.length){await acLoop(P);return;}
+  const dates=await getScanDates();
+  if(!dates||!dates.length){setS(P+'SetupStatus','Data not connected yet.','warn');return;}
+  const lastMonth=dates[dates.length-1].slice(0,7);
+  const lastOf={}; dates.forEach(d=>{lastOf[d.slice(0,7)]=d;});
+  let months=[]; let [y,m]=String(S.month).slice(0,7).split('-').map(Number);
+  m++; if(m>12){m=1;y++;}
+  while(true){const k=`${y}-${String(m).padStart(2,'0')}`; if(k>lastMonth)break;
+              months.push(k); m++; if(m>12){m=1;y++;}}
+  // same month-end discipline as a fresh run: only rebalance on completed months
+  months=months.filter(k=>k<lastMonth||(lastOf[k]&&+lastOf[k].slice(8,10)>=28));
+  if(!months.length){
+    setS(P+'SetupStatus',`Already up to date — ${S.month} is the newest completed month.`,'ok');
+    return;
+  }
+  S.auto=S.auto||{};
+  if(S.auto.topN==null)S.auto.topN=Math.max(2,S.holdings?S.holdings.length:25);
+  if(S.auto.mcMin==null)S.auto.mcMin=S.mmin||0;
+  S.auto.months=months; S.auto.i=0;
   await acLoop(P);
 }
 function acReset(P){
