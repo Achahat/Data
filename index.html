@@ -111,7 +111,7 @@ a{color:var(--accent);}
     <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
       <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="pc">Perfect Change</a><a data-pane="pf">Perfect Change (fallback)</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
       <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a><a data-pane="sn">Nifty-Timed Short (F&O)</a></div></div>
     <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
@@ -682,6 +682,110 @@ a{color:var(--accent);}
     <div class="subcard">
       <div class="section-head">Share In / Share Out — weekly log</div>
       <div class="tblwrap" style="max-height:240px"><table id="wkLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="card hidden" id="pane-pc">
+  <div class="section-head">Perfect Change — the weakest holding is replaced by the first share at or above the RSI level</div>
+  <div id="pcSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="pcDate"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="pcTop" style="width:100px" value="30" min="1" max="300"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="pcMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>RSI level</label><input type="number" id="pcLvl" style="width:90px" value="80" min="1" max="99" title="candidates are taken from this level upwards, nearest first"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="pcAmt" style="width:120px" placeholder="e.g. 100000"></div>
+      <div class="hidden"><input type="checkbox" id="pcNextM"></div>
+      <button onclick="STRATS.pc.screen()">Screen shares</button>
+      <button class="ghost hidden" id="pcStartBtn" onclick="STRATS.pc.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="pcSetupStatus">Each week the weakest holding is offered up against the share sitting just above the RSI level — not the strongest one. If nothing is at or above the level, no change is made that week.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('pc',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('pc',false)">Unselect all</button><span class="pill" id="pcPickCount"></span></div>
+    <div class="tblwrap"><table id="pcPickTbl"></table></div>
+  </div>
+  <div id="pcRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="pcHead" style="font-size:14px"></div>
+      <div>
+        <button id="pcNextBtn" onclick="STRATS.pc.advance()">Next week ▶</button>
+        <button class="ghost" id="pcRunAllBtn" onclick="STRATS.pc.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="pcRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.pc.runTill()">⏩ Run till date</button>
+        <button class="ghost" onclick="STRATS.pc.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('pc')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.pc.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="pcSwapRow">
+      <div id="pcSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.pc.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.pc.apply(false)">No change this week</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="pcChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="pcChart2"></canvas></div>
+    <div class="row" id="pcInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="pcHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — weekly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="pcLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<div class="card hidden" id="pane-pf">
+  <div class="section-head">Perfect Change (fallback) — as above, but drops below the level when nothing clears it</div>
+  <div id="pfSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="pfDate"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="pfTop" style="width:100px" value="30" min="1" max="300"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="pfMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>RSI level</label><input type="number" id="pfLvl" style="width:90px" value="80" min="1" max="99" title="candidates are taken from this level upwards, nearest first; if none, downwards from the level"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="pfAmt" style="width:120px" placeholder="e.g. 100000"></div>
+      <div class="hidden"><input type="checkbox" id="pfNextM"></div>
+      <button onclick="STRATS.pf.screen()">Screen shares</button>
+      <button class="ghost hidden" id="pfStartBtn" onclick="STRATS.pf.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="pfSetupStatus">Each week the weakest holding is offered up against the share sitting just above the RSI level. If nothing clears the level, it falls back to the strongest share below it. A swap still only happens if the incoming share beats your weakest holding.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('pf',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('pf',false)">Unselect all</button><span class="pill" id="pfPickCount"></span></div>
+    <div class="tblwrap"><table id="pfPickTbl"></table></div>
+  </div>
+  <div id="pfRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="pfHead" style="font-size:14px"></div>
+      <div>
+        <button id="pfNextBtn" onclick="STRATS.pf.advance()">Next week ▶</button>
+        <button class="ghost" id="pfRunAllBtn" onclick="STRATS.pf.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="pfRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.pf.runTill()">⏩ Run till date</button>
+        <button class="ghost" onclick="STRATS.pf.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('pf')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.pf.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="pfSwapRow">
+      <div id="pfSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.pf.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.pf.apply(false)">No change this week</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="pfChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="pfChart2"></canvas></div>
+    <div class="row" id="pfInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="pfHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — weekly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="pfLogTbl"></table></div>
     </div>
   </div>
 </div>
@@ -1623,6 +1727,13 @@ async function loadScanByMonth(mth){
   if(!sd)return null;
   return {date:sd,rows:parseScan(await fetchGz(`data/scan/${sd}.csv.gz`))};
 }
+/* the RSI level a Perfect Change pane counts up from - the box if it is on screen,
+   otherwise whatever the run was started with, falling back to 80 */
+function perfectLevel(P,S){
+  const el=document.getElementById(P+'Lvl');
+  const v=el&&el.value!==''?+el.value:(S&&S.lvl!=null?S.lvl:80);
+  return (isFinite(v)&&v>0&&v<100)?v:80;
+}
 function stFilter(rows,rmin,mmin){
   return rows.filter(r=>r.rsi_m!=null&&(rmin==null||r.rsi_m>=rmin)&&(mmin==null||(r.mcap_cr!=null&&r.mcap_cr>=mmin)))
              .sort((a,b)=>(b.rsi_m??-1)-(a.rsi_m??-1));
@@ -1797,6 +1908,19 @@ function makeStrategy(P,fixedN,title,opts){
     // and simply take the best name outside the portfolio.
     const rLim=S.rlock?(S.rmin!==undefined?S.rmin:null):null;
     inst.cands=stFilter(sc.rows,rLim,S.mmin!==undefined?S.mmin:null).filter(r=>!held.has(r.symbol));
+    // Perfect Change does not want the strongest share - it wants the one that has
+    // just crossed the level, so the list is re-ordered to run UPWARDS from it and
+    // the nearest name comes first.  Everything downstream (the one-swap limit, the
+    // upgrade check, the dropdowns) then works unchanged: if that nearest name is no
+    // better than the weakest holding, no swap happens that week.
+    if(opts.perfect){
+      const lvl=perfectLevel(P,S);
+      const above=inst.cands.filter(r=>r.rsi_m>=lvl).sort((a,b)=>a.rsi_m-b.rsi_m);
+      const below=inst.cands.filter(r=>r.rsi_m< lvl).sort((a,b)=>b.rsi_m-a.rsi_m);
+      inst.cands=above.length?(opts.fallback?above.concat(below):above)
+                             :(opts.fallback?below:[]);
+      S.lvl=lvl;
+    }
     const n=fixedN||Math.max(1,Math.min(+($('N')?$('N').value:1)||1,10));
     const k=Math.min(n,S.holdings.length,inst.cands.length);
     const outSorted=[...S.holdings].sort((a,b)=>((a.rsi??-1))-((b.rsi??-1)));
@@ -1820,10 +1944,14 @@ function makeStrategy(P,fixedN,title,opts){
         `</div>`;
     }
     const filt=`Min monthly RSI ${S.rmin==null?'—':S.rmin}, Min mcap ${S.mmin?'₹'+fmt0(S.mmin)+' cr':'—'}`;
+    const lead=opts.perfect?`the nearest share above monthly RSI ${S.lvl}`:'the best share outside the portfolio';
     inst.skipWhy=kk?null:(inst.cands.length===0
-        ? `nothing outside the portfolio passed your filters (${filt}) — ${sc.rows.length} shares were in the file`
+        ? (opts.perfect
+           ? `no share outside the portfolio is at or above monthly RSI ${S.lvl} — `+
+             `${sc.rows.length} shares were in the file`
+           : `nothing outside the portfolio passed your filters (${filt}) — ${sc.rows.length} shares were in the file`)
         : (k&&!kk
-           ? `the best share outside the portfolio is ${inst.cands[0].symbol} at monthly RSI `+
+           ? `${lead} is ${inst.cands[0].symbol} at monthly RSI `+
              `${fmt(inst.cands[0].rsi_m,1)}, which is no better than your weakest holding `+
              `${outSorted[0].sym} at ${outSorted[0].rsi==null?'—':fmt(outSorted[0].rsi,1)}`
            : `only ${S.holdings.length} holding(s) to swap out of`));
@@ -1832,7 +1960,8 @@ function makeStrategy(P,fixedN,title,opts){
     $('SwapRow').classList.remove('hidden');
     $('NextBtn').disabled=true;
     inst.render(`${opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — `+
-      (kk?`set the ${kk} change(s) or skip. ${inst.cands.length} candidate(s) ranked on monthly RSI, best is `+
+      (kk?`set the ${kk} change(s) or skip. ${inst.cands.length} candidate(s) `+
+         (opts.perfect?`counting up from monthly RSI ${S.lvl}, nearest is `:`ranked on monthly RSI, best is `)+
          `${inst.cands[0].symbol} at ${fmt(inst.cands[0].rsi_m,1)} vs your weakest holding `+
          `${outSorted[0].sym} at ${outSorted[0].rsi==null?'—':fmt(outSorted[0].rsi,1)}.`
         :`no change possible — ${inst.skipWhy}.`));
@@ -2110,7 +2239,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -5143,7 +5272,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','t1Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','pcDate','pfDate','t1Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
