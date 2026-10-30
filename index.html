@@ -1463,9 +1463,13 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
+const ALLPANES=['ac','dl','mm','mr','st','mc','wk','pc','pf','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
-  ALLPANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('hidden',x!==p));
+  // a pane missing from this list used to blank the whole page: every known pane was
+  // hidden and the requested one was never shown.  Guard the lookup and fall back to
+  // showing the pane by id even when the list has not been updated.
+  ALLPANES.forEach(x=>{const e=document.getElementById('pane-'+x); if(e)e.classList.toggle('hidden',x!==p);});
+  const cur=document.getElementById('pane-'+p); if(cur)cur.classList.remove('hidden');
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
   document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open'));
   if(p==='sr')try{renderSavedRuns();}catch(e){}
