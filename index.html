@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>try{if(localStorage.getItem('uiTheme')==='light')document.documentElement.dataset.theme='light';}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Back-Testing Platform</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -91,6 +92,126 @@ td:first-child,th:first-child{text-align:left;}
 .wl-empty{color:var(--muted);font-size:12px;padding:8px 4px;}
 a{color:var(--accent);}
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* ===== UI refresh 24 Nov 2026: full-width layout, left sidebar, modern look ===== */
+:root{--bg:#0a0d13;--card:#11161f;--card2:#0d1119;--border:#222a38;--border2:#2c3647;--text:#e8edf5;--muted:#8b95a7;
+--accent:#4f8cff;--accent2:#7c5cff;--green:#22c55e;--red:#f04452;--amber:#f5a524;--side:236px;}
+html{scroll-behavior:smooth;}
+body{max-width:none;margin:0;padding:22px 28px 40px calc(var(--side) + 28px);
+  font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13.5px;line-height:1.45;
+  background:radial-gradient(1200px 600px at 85% -10%,rgba(79,140,255,.08),transparent 60%),
+             radial-gradient(900px 500px at 10% 110%,rgba(124,92,255,.06),transparent 60%),var(--bg);
+  background-attachment:fixed;font-feature-settings:'tnum' 1,'cv11' 1;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#273042;border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+/* --- sidebar (the old top bar) --- */
+.topbar{position:fixed;left:0;top:0;bottom:0;width:var(--side);margin:0;padding:18px 14px 14px;
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:14px;overflow-y:auto;
+  background:linear-gradient(180deg,#0e131c,#0b0f16);border-right:1px solid var(--border);backdrop-filter:none;z-index:200;}
+.side-title{font-weight:800;font-size:17px;letter-spacing:-.2px;line-height:1.15;cursor:pointer;padding:2px 6px 0;
+  background:linear-gradient(90deg,#fff 10%,#9db9ff 55%,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.side-sub{font-size:11px;color:var(--muted);padding:0 6px;margin-top:-10px;}
+.topbar .brand{display:flex;align-items:center;gap:6px 8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--border);
+  border-radius:10px;padding:8px 10px;flex-wrap:wrap;}
+.topbar .brand button{margin-top:6px;width:100%;}
+.nav{flex-direction:column;flex-wrap:nowrap;justify-content:flex-start;gap:4px;}
+.nav-item{position:static;}
+.nav-btn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:7px 10px 7px 12px;font-size:13px;font-weight:600;
+  color:#e8edf5;cursor:pointer;background:none;border-radius:8px;box-shadow:none;}
+.nav-btn:hover{background:rgba(255,255,255,.04)!important;filter:none;}
+.nav-btn::after{content:'';width:7px;height:7px;border-right:2px solid #6b778b;border-bottom:2px solid #6b778b;transform:rotate(-45deg);transition:transform .15s;margin-right:3px;}
+.nav-item.open .nav-btn::after{transform:rotate(45deg);}
+.nav-item.open .nav-drop a{font-size:12.5px;color:#aeb8c8;}
+.nav-item.open .nav-drop a.active{color:#fff;}
+.nav-drop{position:static;display:none;min-width:0;background:none;border:none;box-shadow:none;padding:0 0 0 6px;margin-top:2px;}
+.nav-item.open .nav-drop,.nav-item.solo .nav-drop{display:block;}
+.nav-item.solo .nav-drop{padding:0;margin:0;}
+
+#localBtn{display:none!important;}
+.nav-drop a{position:relative;padding:6px 10px 6px 12px;margin:1px 0;border-radius:8px;font-size:13px;color:#c9d2e0;font-weight:500;}
+.nav-drop a:hover{background:rgba(255,255,255,.04);color:#fff;}
+.nav-drop a.active{background:linear-gradient(90deg,rgba(79,140,255,.18),rgba(79,140,255,.04));color:#fff;font-weight:600;}
+.nav-drop a.active::before{content:'';position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:3px;background:var(--accent);}
+.hero{display:none;}
+/* --- cards & headings --- */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,0)) ,var(--card);border:1px solid var(--border);
+  border-radius:14px;padding:20px 22px;margin-top:0;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px -18px rgba(0,0,0,.7);}
+.card + .card{margin-top:16px;}
+.section-head{font-size:18px;font-weight:700;letter-spacing:-.2px;margin:0 0 14px;}
+.subcard{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+.subcard .section-head,.card .subcard .section-head{font-size:14.5px;}
+.pill{background:var(--card2);border-color:var(--border2);}
+/* --- forms --- */
+label{font-size:11px;font-weight:600;letter-spacing:.3px;color:var(--muted);margin-bottom:5px;}
+input,select,textarea{background:#0b0f17;border:1px solid var(--border2);border-radius:8px;padding:8px 11px;font-size:13px;
+  font-family:inherit;color:var(--text);transition:border-color .15s,box-shadow .15s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.18);}
+.row{gap:14px;margin-bottom:12px;}
+button{background:linear-gradient(180deg,#5b95ff,#3f7bf0);border-radius:8px;padding:9px 16px;font-family:inherit;font-weight:600;
+  box-shadow:0 6px 16px -8px rgba(79,140,255,.7);transition:transform .08s,filter .15s;}
+button:hover{opacity:1;filter:brightness(1.08);}
+button:active{transform:translateY(1px);}
+button.ghost{background:rgba(255,255,255,.02);border:1px solid var(--border2);box-shadow:none;color:var(--text);}
+button.ghost:hover{background:rgba(255,255,255,.06);}
+/* --- tables --- */
+.tblwrap{max-height:calc(100vh - 300px);border:1px solid var(--border);border-radius:10px;}
+table{font-size:12.5px;margin-top:0;font-variant-numeric:tabular-nums;}
+th{background:#141a25;color:#9aa5b8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:9px 10px;border-bottom:1px solid var(--border2);}
+td{padding:7px 10px;border-bottom:1px solid rgba(34,42,56,.7);}
+tbody tr:nth-child(even) td{background:rgba(255,255,255,.012);}
+tbody tr:hover td{background:rgba(79,140,255,.07);}
+.status{font-size:12.5px;}
+.chartbox,#anChartWrap{background:var(--card2);border-color:var(--border);border-radius:12px;}
+.watchlist{background:var(--card2);border-radius:12px;}
+.nav-drop a.soon{color:#556071;}
+
+
+/* ===== Market-cap rule: Fixed / By year ===== */
+.mcseg{display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:36px;}
+.mcseg button{background:transparent;box-shadow:none;color:var(--muted);border-radius:0;padding:0 12px;font-size:12.5px;font-weight:600;}
+.mcseg button.on{background:var(--accent);color:#fff;}
+.mcpanel{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:2px 0 12px;}
+.mcpanel .mchead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.mcpanel .mchead b{font-size:13.5px;}
+.mcrows{display:flex;flex-wrap:wrap;gap:8px;}
+.mcrow{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:5px 6px 5px 10px;}
+.mcrow span{font-size:11.5px;color:var(--muted);}
+.mcrow input{width:72px;padding:5px 7px;}
+.mcrow input.v{width:92px;}
+.mcrow .x{background:transparent;box-shadow:none;color:var(--muted);padding:2px 6px;font-size:14px;}
+.mcrow .x:hover{color:var(--red);}
+.mcnote{font-size:11.5px;color:var(--muted);margin-top:8px;}
+/* ===== Day mode ===== */
+html[data-theme="light"]{--bg:#f4f6fa;--card:#ffffff;--card2:#f7f9fc;--border:#e2e7ef;--border2:#d3dae5;--text:#141a26;--muted:#5d6778;
+  --accent:#2f6fec;--green:#15803d;--red:#d92d3a;--amber:#b45309;color-scheme:light;}
+html[data-theme="light"] body{background:radial-gradient(1200px 600px at 85% -10%,rgba(47,111,236,.07),transparent 60%),var(--bg);}
+html[data-theme="light"] .topbar{background:#ffffff;border-right-color:var(--border);}
+html[data-theme="light"] .side-title{background:linear-gradient(90deg,#0f172a 10%,#2f6fec 60%,#7c3aed);-webkit-background-clip:text;background-clip:text;}
+html[data-theme="light"] .nav-btn{color:#141a26;}
+html[data-theme="light"] .nav-btn:hover,html[data-theme="light"] .nav-drop a:hover{background:#eef2f8!important;color:#0f172a;}
+html[data-theme="light"] .nav-drop a,html[data-theme="light"] .nav-item.open .nav-drop a{color:#465063;}
+html[data-theme="light"] .nav-drop a.active{background:linear-gradient(90deg,rgba(47,111,236,.14),rgba(47,111,236,.03));color:#0f172a;}
+html[data-theme="light"] .card{background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -16px rgba(16,24,40,.18);}
+html[data-theme="light"] input,html[data-theme="light"] select,html[data-theme="light"] textarea{background:#fff;}
+html[data-theme="light"] th{background:#f1f4f9;color:#5d6778;}
+html[data-theme="light"] td{border-bottom-color:#edf0f5;}
+html[data-theme="light"] tbody tr:nth-child(even) td{background:#fafbfd;}
+html[data-theme="light"] tbody tr:hover td{background:rgba(47,111,236,.06);}
+html[data-theme="light"] button.ghost{background:#fff;color:#141a26;}
+html[data-theme="light"] button.ghost:hover{background:#f1f4f9;}
+html[data-theme="light"] ::-webkit-scrollbar-thumb{background:#c9d1dd;}
+html[data-theme="light"] #stopBar{background:#fff!important;}
+html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest div.sel{background:#eef2f8;}
+.theme-btn{width:100%;display:flex;justify-content:center;gap:6px;}
+/* --- small screens: sidebar returns to the top --- */
+@media (max-width:1000px){
+  body{padding:14px;}
+  .topbar{position:static;width:auto;border-right:none;border-bottom:1px solid var(--border);margin:-14px -14px 14px;}
+  .nav{flex-direction:row;flex-wrap:wrap;}
+}
+</style>
 </head>
 <body>
 <div id="stopBar" class="hidden" style="position:fixed;right:18px;bottom:18px;z-index:9999;
@@ -103,21 +224,20 @@ a{color:var(--accent);}
 
 
 <div class="topbar">
+  <div class="side-title" onclick="showPane('pl')" title="Home - Daily P&L">Back-Testing Platform</div>
+  <div class="side-sub">NSE equities · indices · F&amp;O</div>
+  <button class="ghost mini theme-btn" id="themeBtn" onclick="toggleTheme()">☀ Day mode</button>
   <div class="brand"><span class="dot" id="liveDot"></span><span id="liveText">Connecting…</span>
     <button class="ghost mini hidden" id="localBtn" onclick="pickLocal()">Use local data folder</button></div>
   <div class="nav" id="mainNav">
-    <div class="nav-item"><button class="nav-btn">Data ▾</button>
-      <div class="nav-drop"><a data-pane="dl">Raw Data</a><a data-pane="mm">Multi Month Data</a><a data-pane="mr">RSI Count</a></div></div>
-    <div class="nav-item"><button class="nav-btn">P&L Strategies ▾</button>
+    <div class="nav-item solo"><div class="nav-drop"><a data-pane="pl">Daily P&amp;L</a></div></div>
+    <div class="nav-item solo"><div class="nav-drop"><a data-pane="mr">RSI Count</a></div></div>
+    <div class="nav-item"><button class="nav-btn">P&amp;L Strategies</button>
       <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
-    <div class="nav-item"><button class="nav-btn">RSI Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="pc">Perfect Change</a><a data-pane="pf">Perfect Change (fallback)</a><a data-pane="sx">Sector Strategy</a><a data-pane="bh">Buy &amp; Hold (oversold)</a></div></div>
-    <div class="nav-item"><button class="nav-btn">Short Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="sh">Blow-off Short (F&O)</a><a data-pane="sn">Nifty-Timed Short (F&O)</a></div></div>
-    <div class="nav-item"><button class="nav-btn">Index Strategy ▾</button>
-      <div class="nav-drop"><a data-pane="ix1">RSI + Stoch (Futures)</a><a data-pane="ix5">RSI + Stoch (Shares)</a><a data-pane="ix2">Buy Grid</a><a data-pane="ix3">Short Grid</a><a data-pane="ix4">Rollover / Carry Cost</a></div></div>
-    <div class="nav-item"><button class="nav-btn">Tools ▾</button>
-      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a><a data-pane="sr">Saved Runs</a><a onclick="pickLocal()">Use local data folder</a><a onclick="useMegaData()">Use MEGA data</a></div></div>
+    <div class="nav-item"><button class="nav-btn">RSI Strategy</button>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="mw">Multi Weekly Change</a><a data-pane="dc">Daily Change</a></div></div>
+    <div class="nav-item"><button class="nav-btn">Tools</button>
+      <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a></div></div>
   </div>
 </div>
 
@@ -682,6 +802,111 @@ a{color:var(--accent);}
     <div class="subcard">
       <div class="section-head">Share In / Share Out — weekly log</div>
       <div class="tblwrap" style="max-height:240px"><table id="wkLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- MULTI WEEKLY CHANGE -->
+<div class="card hidden" id="pane-mw">
+  <div class="section-head">Multi Weekly Change — you choose how many swaps each week, ranked on monthly RSI</div>
+  <div id="mwSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="mwDate"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="mwTop" style="width:100px" value="30" min="1" max="300"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="mwMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="mwAmt" style="width:120px" placeholder="e.g. 100000"></div>
+      <div><label>Changes per week (1–5)</label><input type="number" id="mwN" style="width:90px" value="2" min="1" max="5"></div>
+      <div class="hidden"><input type="checkbox" id="mwNextM"></div>
+      <button onclick="STRATS.mw.screen()">Screen shares</button>
+      <button class="ghost hidden" id="mwStartBtn" onclick="STRATS.mw.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="mwSetupStatus">Pick how many shares the portfolio holds (top N by monthly RSI), screen, untick anything you don't want, then start. Each week (Friday close) up to your chosen number of weakest holdings are swapped for the strongest shares outside the portfolio — a swap only happens if the incoming monthly RSI is higher.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('mw',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('mw',false)">Unselect all</button><span class="pill" id="mwPickCount"></span></div>
+    <div class="tblwrap"><table id="mwPickTbl"></table></div>
+  </div>
+  <div id="mwRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="mwHead" style="font-size:14px"></div>
+      <div>
+        <button id="mwNextBtn" onclick="STRATS.mw.advance()">Next week ▶</button>
+        <button class="ghost" id="mwRunAllBtn" onclick="STRATS.mw.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="mwRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.mw.runTill()">⏩ Run till date</button>
+        <button class="ghost" onclick="STRATS.mw.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('mw')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.mw.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="mwSwapRow">
+      <div id="mwSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.mw.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.mw.apply(false)">No change this week</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="mwChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="mwChart2"></canvas></div>
+    <div class="row" id="mwInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="mwHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — weekly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="mwLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- DAILY CHANGE -->
+<div class="card hidden" id="pane-dc">
+  <div class="section-head">Daily Change — at every day's close, hold the top N shares by monthly RSI</div>
+  <div id="dcSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="dcDate"></div>
+      <div><label>Top shares by Monthly RSI</label><input type="number" id="dcTop" style="width:100px" value="30" min="1" max="300"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="dcMc" style="width:110px" placeholder="e.g. 1000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="dcAmt" style="width:120px" placeholder="e.g. 100000"></div>
+      <div class="hidden"><input type="checkbox" id="dcNextM"></div>
+      <button onclick="STRATS.dc.screen()">Screen shares</button>
+      <button class="ghost hidden" id="dcStartBtn" onclick="STRATS.dc.start()">Start strategy with selected ▶</button>
+    </div>
+    <div class="status" id="dcSetupStatus">Pick how many shares the portfolio holds (top N by monthly RSI), screen, untick anything you don't want, then start. At every day's close, any holding that has dropped out of the top N by monthly RSI is sold and replaced by the strongest share outside the portfolio, so after each close you hold the top N. Run till today steps one trading day at a time, so long periods take a while to load.</div>
+    <div class="row" style="margin-bottom:4px"><button class="ghost mini" onclick="pickAll('dc',true)">Select all</button>
+      <button class="ghost mini" onclick="pickAll('dc',false)">Unselect all</button><span class="pill" id="dcPickCount"></span></div>
+    <div class="tblwrap"><table id="dcPickTbl"></table></div>
+  </div>
+  <div id="dcRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="dcHead" style="font-size:14px"></div>
+      <div>
+        <button id="dcNextBtn" onclick="STRATS.dc.advance()">Next day ▶</button>
+        <button class="ghost" id="dcRunAllBtn" onclick="STRATS.dc.runTillToday()">⏩ Run till today</button>
+        <input type="date" id="dcRunTo" style="width:150px" title="run only up to this date">
+        <button class="ghost" onclick="STRATS.dc.runTill()">⏩ Run till date</button>
+        <button class="ghost" onclick="STRATS.dc.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('dc')">💾 Save run</button>
+        <button class="ghost" onclick="STRATS.dc.reset()">↺ New strategy</button>
+      </div>
+    </div>
+    <div class="hidden" id="dcSwapRow">
+      <div id="dcSwaps"></div>
+      <div class="row">
+        <button onclick="STRATS.dc.apply(true)">Apply change</button>
+        <button class="ghost" onclick="STRATS.dc.apply(false)">No change today</button>
+      </div>
+    </div>
+    <div class="chartbox" style="height:300px"><canvas id="dcChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px"><canvas id="dcChart2"></canvas></div>
+    <div class="row" id="dcInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="dcHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — daily log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="dcLogTbl"></table></div>
     </div>
   </div>
 </div>
@@ -1260,7 +1485,7 @@ async function syncSharedRuns(){
   }
   if(added){try{putRuns(local);}catch(e){}}
   // if this device has no live run for a strategy, adopt the newest shared one
-  ['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>{
+  ['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>{
     const r=newest[p];
     if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
       try{
@@ -1331,7 +1556,7 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{['st','mc','ac','wk','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
+  try{['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
@@ -1463,7 +1688,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['ac','dl','mm','mr','st','mc','wk','pc','pf','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
+const ALLPANES=['mw','dc','ac','dl','mm','mr','st','mc','wk','pc','pf','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
   // a pane missing from this list used to blank the whole page: every known pane was
   // hidden and the requested one was never shown.  Guard the lookup and fall back to
@@ -1471,21 +1696,17 @@ function showPane(p){
   ALLPANES.forEach(x=>{const e=document.getElementById('pane-'+x); if(e)e.classList.toggle('hidden',x!==p);});
   const cur=document.getElementById('pane-'+p); if(cur)cur.classList.remove('hidden');
   document.querySelectorAll('#mainNav .nav-drop a').forEach(a=>a.classList.toggle('active',a.dataset.pane===p));
-  document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open'));
+  document.querySelectorAll('#mainNav .nav-item').forEach(n=>{if(n.querySelector('.nav-drop a.active'))n.classList.add('open');});
   if(p==='sr')try{renderSavedRuns();}catch(e){}
   if(p==='pl')try{plInit();}catch(e){}
   window.scrollTo({top:0});
 }
+// sidebar: each strategy group is a collapsible dropdown; the group holding the open page stays expanded
 document.querySelectorAll('#mainNav .nav-item').forEach(item=>{
-  item.querySelector('.nav-btn').addEventListener('click',e=>{
-    const was=item.classList.contains('open');
-    document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open'));
-    if(!was)item.classList.add('open');
-    e.stopPropagation();
-  });
+  const btn=item.querySelector('.nav-btn');
+  if(btn)btn.addEventListener('click',e=>{ item.classList.toggle('open'); e.stopPropagation(); });
   item.querySelectorAll('.nav-drop a[data-pane]').forEach(a=>a.addEventListener('click',()=>showPane(a.dataset.pane)));
 });
-document.addEventListener('click',()=>document.querySelectorAll('#mainNav .nav-item').forEach(n=>n.classList.remove('open')));
 
 /* ============ data download (step 1) ============ */
 let SCANDATES=null, MATCHES=[], SCANDATE=null;
@@ -1763,6 +1984,8 @@ const stopNote=(done,total)=>RUNSTOP?` — STOPPED by you at ${fmt0(done)} of ${
 
 function makeStrategy(P,fixedN,title,opts){
   opts=opts||{};
+  // step wording: only the new strategies relabel; older ones keep their original labels
+  const stepWord=opts.datedCagr?(opts.daily?'day':'week'):'month', stepWords=opts.datedCagr?(opts.daily?'Days':'Weeks'):'Months';
   const $=id=>document.getElementById(P+id);
   const inst={S:null,chart:null,cands:[],scr:[]};
   const pushSector=(month)=>{const S=inst.S;
@@ -1796,11 +2019,13 @@ function makeStrategy(P,fixedN,title,opts){
     const topN=topEl?Math.max(1,Math.min(+topEl.value||30,300)):null;
     const rEl=$('Rsi');
     const rmin=topN?null:((rEl&&rEl.value!=='')?+rEl.value:null);
-    const mmin=$('Mc').value===''?null:+$('Mc').value;
+    const mcSched=mcSchedActive(P);
+    if(mcSched===false){setS(P+'SetupStatus','Market cap by year: add at least one year with a floor, or switch back to Fixed.','warn');return;}
     setS(P+'SetupStatus','loading…','');
     const dates=await getScanDates();
     const sd=dates?dates.filter(d=>d<=dt).pop():null;
     if(!sd){setS(P+'SetupStatus','No trading day found.','warn');return;}
+    const mmin=mcSched?floorAt(mcSched,sd):($('Mc').value===''?null:+$('Mc').value);
     if(opts.sectors){
       inst.sectorNames=($('Sectors').value||'').split(',').map(s=>s.trim()).filter(Boolean);
       if(!inst.sectorNames.length){setS(P+'SetupStatus','Name your sectors first (comma separated).','warn');return;}
@@ -1810,6 +2035,7 @@ function makeStrategy(P,fixedN,title,opts){
     if(topN)inst.scr=inst.scr.slice(0,topN);   // stFilter already sorts highest monthly RSI first
     const rl=document.getElementById(P+'Rlock');
     inst.S={screenDate:sd,rmin,mmin,topN,rlock:!!(rl&&rl.checked)};
+    if(mcSched)inst.S.mcSched=mcSched;
     const secTd=r=>opts.sectors?`<td><select class="${P}SecPick" data-sym="${r.symbol}">${inst.sectorNames.map(n=>`<option value="${n}">${n}</option>`).join('')}</select></td>`:'';
     $('PickTbl').innerHTML='<tr><th></th><th>#</th><th style="text-align:left">Symbol</th>'+(opts.sectors?'<th style="text-align:left">Sector</th>':'')+'<th>RSI (monthly)</th><th>Close</th><th>Mcap ₹ cr</th></tr>'+
       inst.scr.slice(0,300).map((r,i)=>{
@@ -1874,7 +2100,17 @@ function makeStrategy(P,fixedN,title,opts){
   inst.advance=async function(){
     const S=inst.S;
     let nm,sc;
-    if(opts.weekly){
+    if(opts.daily){
+      // Daily Change: step to the next trading day's close
+      const all=await getScanDates();
+      nm=all?(all.find(d=>d>S.month)||null):null;
+      if(!nm){
+        inst.render('No data beyond '+S.month+' yet — the next day arrives with tonight\'s update.');
+        return;
+      }
+      setS(P+'Head','loading '+nm+'…','');
+      sc=await loadScanByDate(nm);
+    } else if(opts.weekly){
       nm=await nextWeekEnd(S.month);
       if(!nm){
         const all=await getScanDates();
@@ -1901,7 +2137,7 @@ function makeStrategy(P,fixedN,title,opts){
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
     for(const h of S.holdings){
       const r=map.get(h.sym);
-      if(r){h.lastClose=r.close;h.rsi=r.rsi_m;} else h.rsi=null;
+      if(r){h.lastClose=r.close;h.rsi=r.rsi_m;h.mcap=r.mcap_cr;} else {h.rsi=null;h.mcap=null;}
     }
     S.series.push({month:nm,value:portValue(S)});
     if(opts.sectors)pushSector(nm);
@@ -1911,7 +2147,7 @@ function makeStrategy(P,fixedN,title,opts){
     // unless "keep as a filter" is ticked we rank the whole universe on monthly RSI
     // and simply take the best name outside the portfolio.
     const rLim=S.rlock?(S.rmin!==undefined?S.rmin:null):null;
-    inst.cands=stFilter(sc.rows,rLim,S.mmin!==undefined?S.mmin:null).filter(r=>!held.has(r.symbol));
+    inst.cands=stFilter(sc.rows,rLim,mcFloor(S,nm)).filter(r=>!held.has(r.symbol));
     // Perfect Change does not want the strongest share - it wants the one that has
     // just crossed the level, so the list is re-ordered to run UPWARDS from it and
     // the nearest name comes first.  Everything downstream (the one-swap limit, the
@@ -1925,13 +2161,17 @@ function makeStrategy(P,fixedN,title,opts){
                              :(opts.fallback?below:[]);
       S.lvl=lvl;
     }
-    const n=fixedN||Math.max(1,Math.min(+($('N')?$('N').value:1)||1,10));
+    const n=fixedN||Math.max(1,Math.min(+($('N')?$('N').value:1)||1,opts.maxN||10));
     const k=Math.min(n,S.holdings.length,inst.cands.length);
-    const outSorted=[...S.holdings].sort((a,b)=>((a.rsi??-1))-((b.rsi??-1)));
+    // Daily Change holds the top N of the ELIGIBLE universe: a holding that has slipped under
+    // the market-cap floor counts as weakest and is always offered up for a swap
+    const flNow=mcFloor(S,nm), belowFloor=h=>opts.daily&&flNow!=null&&(h.mcap==null||h.mcap<flNow);
+    const outKey=h=>belowFloor(h)?-2:(h.rsi??-1);
+    const outSorted=[...S.holdings].sort((a,b)=>outKey(a)-outKey(b));
     // a swap has to be an upgrade: the incoming monthly RSI must beat the outgoing one
     let usable=0;
     for(let i=0;i<k;i++){
-      const outR=outSorted[i]&&outSorted[i].rsi, inR=inst.cands[i]&&inst.cands[i].rsi_m;
+      const outR=outSorted[i]&&(belowFloor(outSorted[i])?null:outSorted[i].rsi), inR=inst.cands[i]&&inst.cands[i].rsi_m;
       if(inR==null)break;
       if(outR!=null&&inR<=outR)break;
       usable++;
@@ -1942,12 +2182,13 @@ function makeStrategy(P,fixedN,title,opts){
       html+=`<div class="row"><div><label>Share out #${i+1} (sell)</label><select class="${P}OutSel">`+
         outSorted.map((h,j)=>`<option value="${h.sym}"${j===i?' selected':''}>${h.sym}${h.sector?' · '+h.sector:''} (RSI ${h.rsi==null?'—':fmt(h.rsi)})</option>`).join('')+
         `</select></div><div><label>Share in #${i+1} (buy with proceeds)</label><select class="${P}InSel">`+
-        inst.cands.slice(0,40).map((r,j)=>`<option value="${r.symbol}"${j===i?' selected':''}>${r.symbol} (RSI ${fmt(r.rsi_m)})</option>`).join('')+
+        inst.cands.slice(0,Math.max(40,kk+5)).map((r,j)=>`<option value="${r.symbol}"${j===i?' selected':''}>${r.symbol} (RSI ${fmt(r.rsi_m)})</option>`).join('')+
         `</select></div>`+
         (opts.sectors?`<div><label>Sector for incoming</label><select class="${P}SecSel">${S.sectorNames.map(n=>`<option value="${n}"${outSorted[i]&&n===outSorted[i].sector?' selected':''}>${n}</option>`).join('')}</select></div>`:'')+
         `</div>`;
     }
-    const filt=`Min monthly RSI ${S.rmin==null?'—':S.rmin}, Min mcap ${S.mmin?'₹'+fmt0(S.mmin)+' cr':'—'}`;
+    const fl=mcFloor(S,nm);
+    const filt=`Min monthly RSI ${S.rmin==null?'—':S.rmin}, Min mcap ${fl?'₹'+fmt0(fl)+' cr'+(S.mcSched?' ('+String(nm).slice(0,4)+' floor)':''):'—'}`;
     const lead=opts.perfect?`the nearest share above monthly RSI ${S.lvl}`:'the best share outside the portfolio';
     inst.skipWhy=kk?null:(inst.cands.length===0
         ? (opts.perfect
@@ -1963,7 +2204,7 @@ function makeStrategy(P,fixedN,title,opts){
       `<div class="status warn">No qualifying candidate — ${inst.skipWhy}.</div>`;
     $('SwapRow').classList.remove('hidden');
     $('NextBtn').disabled=true;
-    inst.render(`${opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — `+
+    inst.render(`${opts.daily?'Day':opts.weekly?'Week ending':'Month'} ${nm}${opts.weekly?'':' (as on '+sc.date+')'} — `+
       (kk?`set the ${kk} change(s) or skip. ${inst.cands.length} candidate(s) `+
          (opts.perfect?`counting up from monthly RSI ${S.lvl}, nearest is `:`ranked on monthly RSI, best is `)+
          `${inst.cands[0].symbol} at ${fmt(inst.cands[0].rsi_m,1)} vs your weakest holding `+
@@ -2021,7 +2262,7 @@ function makeStrategy(P,fixedN,title,opts){
     $('SwapRow').classList.add('hidden');
     $('NextBtn').disabled=false;
     persist();
-    inst.render(`${opts.weekly?'Week':'Month'} ${S.month} done — press Next for the following ${opts.weekly?'week':'month'}.`);
+    inst.render(`${opts.daily?'Day':opts.weekly?'Week':'Month'} ${S.month} done — press Next for the following ${opts.daily?'day':opts.weekly?'week':'month'}.`);
   };
 
   inst.sortHold=function(col){
@@ -2044,7 +2285,7 @@ function makeStrategy(P,fixedN,title,opts){
     const btn=document.getElementById(P+'RunAllBtn');
     if(btn){btn.disabled=true;btn.textContent='running…';}
     try{
-      for(let i=0;i<2000;i++){
+      for(let i=0;i<(opts.daily?9000:2000);i++){
         const before=inst.S.month;
         await inst.advance();
         if(inst.S.month===before)break;      // no more data
@@ -2062,7 +2303,11 @@ function makeStrategy(P,fixedN,title,opts){
     let peak=-1,mdd=0;
     S.series.forEach(p=>{peak=Math.max(peak,p.value);mdd=Math.min(mdd,(p.value-peak)/peak*100);});
     const months=S.series.length-1;
-    const cagr=months>=12?((Math.pow(value/S.invested,12/months)-1)*100):null;
+    let cagr=months>=12?((Math.pow(value/S.invested,12/months)-1)*100):null;
+    if(opts.datedCagr&&S.series.length>1){   // weekly/daily steps: annualise on calendar time, not step count
+      const yrs=(new Date(S.series[S.series.length-1].month)-new Date(S.series[0].month))/(365.25*864e5);
+      cagr=yrs>=1?((Math.pow(value/S.invested,1/yrs)-1)*100):null;
+    }
     const swaps=S.log.filter(l=>l.out).length;
     const niftyRet=(S.nifty&&S.niftyBase&&S.nifty[S.month])?((S.nifty[S.month]/S.niftyBase-1)*100):null;
     const perf=[];
@@ -2111,8 +2356,8 @@ function makeStrategy(P,fixedN,title,opts){
       if(inst.chart2)inst.chart2.destroy();
       inst.chart2=new Chart(c2,{type:'bar',
         data:{labels:mlabels,datasets:[
-          {label:'Portfolio monthly %',data:mport,backgroundColor:'rgba(96,165,250,.85)',borderRadius:4},
-          {label:'NIFTY 50 monthly %',data:mbench,backgroundColor:'rgba(52,211,153,.75)',borderRadius:4}]},
+          {label:'Portfolio '+(stepWord==='day'?'daily':stepWord+'ly')+' %',data:mport,backgroundColor:'rgba(96,165,250,.85)',borderRadius:4},
+          {label:'NIFTY 50 '+(stepWord==='day'?'daily':stepWord+'ly')+' %',data:mbench,backgroundColor:'rgba(52,211,153,.75)',borderRadius:4}]},
         options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
           plugins:{legend:{labels:{color:'#e6edf3'}},
             zoom:{pan:{enabled:true,mode:'x'},zoom:{wheel:{enabled:false},pinch:{enabled:false}},
@@ -2151,7 +2396,7 @@ function makeStrategy(P,fixedN,title,opts){
       (worst?box('Biggest loser',`${worst.sym} ${fmt(worst.pct)}%${worst.open?'':' (sold)'}`,'neg'):'')+
       box('Swaps',st.swaps)+
       (st.niftyRet!=null?box('NIFTY 50 same period',(st.niftyRet>=0?'+':'')+fmt(st.niftyRet)+'%',st.niftyRet>=0?'pos':'neg'):'')+
-      box('Months',st.months);
+      box(stepWords,st.months);
     const hs=inst.holdSort||(inst.holdSort={col:'value',dir:-1});
     const hval={symbol:h=>h.sym,sector:h=>h.sector||'',month:h=>h.buyMonth,buy:h=>h.buyPrice,now:h=>h.lastClose,
       value:h=>h.units*h.lastClose,pnl:h=>(h.lastClose-h.buyPrice)/h.buyPrice,rsi:h=>h.rsi??-1e18};
@@ -2199,8 +2444,8 @@ function makeStrategy(P,fixedN,title,opts){
       const best=st.perf[0],worst=st.perf[st.perf.length-1];
       const wb=XLSX.utils.book_new();
       const sum=[[title+' — Back-test Report'],[],
-        ['Screen date',S.screenDate],['RSI (monthly) min',S.rmin??'—'],['Min Mcap (₹ cr)',S.mmin??'—'],
-        ['Amount per share (₹)',S.amt],['Months run',st.months],['Swaps',st.swaps],[],
+        ['Screen date',S.screenDate],['RSI (monthly) min',S.rmin??'—'],['Min Mcap (₹ cr)',S.mcSched?mcSchedText(S.mcSched):(S.mmin??'—')],
+        ['Amount per share (₹)',S.amt],[stepWords+' run',st.months],['Swaps',st.swaps],[],
         ['Invested (₹)',Math.round(S.invested)],['Portfolio value (₹)',Math.round(st.value)],
         ['Total return (%)',+st.ret.toFixed(2)],['CAGR (%)',st.cagr==null?'—':+st.cagr.toFixed(2)],
         ['Max drawdown (%)',+st.mdd.toFixed(2)],
@@ -2243,7 +2488,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),mw:makeStrategy('mw',null,'Multi Weekly Change',{weekly:true,maxN:5,datedCagr:true}),dc:makeStrategy('dc',100000,'Daily Change',{weekly:true,daily:true,datedCagr:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -2484,7 +2729,9 @@ async function acRun(P){
   if(!dEl||!dEl.value){setS(P+'SetupStatus','Pick a start date.','warn');return;}
   const start=dEl.value.slice(0,7);          // the strategy still rebalances monthly
   const topN=Math.max(2,Math.min(+document.getElementById(P+'N').value||25,100));
-  const mcMin=+document.getElementById(P+'Mc').value||0;   // blank = no market-cap floor
+  const mcSched=mcSchedActive(P);
+  if(mcSched===false){setS(P+'SetupStatus','Market cap by year: add at least one year with a floor, or switch back to Fixed.','warn');return;}
+  const mcMin=mcSched?floorAt(mcSched,dEl.value):(+document.getElementById(P+'Mc').value||0);   // blank = no market-cap floor
   const amtRaw=document.getElementById(P+'Amt').value;
   if(amtRaw===''||!(+amtRaw>0)){setS(P+'SetupStatus','Enter the amount per share first.','warn');return;}
   const amt=+amtRaw;
@@ -2505,6 +2752,7 @@ async function acRun(P){
   const S={rmin:null,mmin:mcMin,amt,holdings:[],log:[],series:[],month:start,invested:0,screenDate:null};
   STRATS[P].S=S;
   S.auto={months,topN,mcMin,i:0};
+  if(mcSched){S.mcSched=mcSched; S.auto.mcSched=mcSched;}
   await acLoop(P);
 }
 
@@ -2525,7 +2773,8 @@ async function acLoop(P){
     let sc=null;
     try{sc=await loadScanByMonth(mth);}catch(e){}
     if(!sc)continue;
-    const rows=sc.rows.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcMin).sort((a,b)=>b.rsi_m-a.rsi_m);
+    const mcNow=S.mcSched?floorAt(S.mcSched,mth):mcMin;     // by-year floors change on 1 January
+    const rows=sc.rows.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcNow).sort((a,b)=>b.rsi_m-a.rsi_m);
     const top=rows.slice(0,topN);
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
     if(!S.holdings.length){
@@ -2535,7 +2784,7 @@ async function acLoop(P){
         const nMc=sc.rows.filter(r=>r.mcap_cr!=null).length;
         const maxMc=sc.rows.reduce((a,r)=>Math.max(a,r.mcap_cr||0),0);
         setS(P+'SetupStatus',
-          `Nothing qualified in ${mth} (file ${sc.date}): ${nRows} rows, ${nRsi} with monthly RSI, ${nMc} with market cap, biggest mcap Rs ${fmt0(maxMc)} cr vs your filter Rs ${fmt0(mcMin)} cr.`,'warn');
+          `Nothing qualified in ${mth} (file ${sc.date}): ${nRows} rows, ${nRsi} with monthly RSI, ${nMc} with market cap, biggest mcap Rs ${fmt0(maxMc)} cr vs your filter Rs ${fmt0(mcNow)} cr.`,'warn');
         STRATS[P].S=null; return;
       }
       S.screenDate=sc.date; S.month=mth;
@@ -2597,7 +2846,7 @@ async function acLoop(P){
   document.getElementById(P+'Run').classList.remove('hidden');
   try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
   const done=S.auto.i, total=months.length;
-  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ≥ ₹${fmt0(mcMin)} cr`+
+  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ${S.mcSched?'by year ('+mcSchedText(S.mcSched)+')':'≥ ₹'+fmt0(mcMin)+' cr'}`+
     (halted?` · PAUSED at ${S.month} (${done}/${total} months)`:''));
   setS(P+'SetupStatus',
     halted?`Paused at ${S.month} — ${done} of ${total} months done, ${total-done} to go. Look around, then press Continue.`
@@ -3212,7 +3461,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -3240,7 +3489,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -3289,7 +3538,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -3320,7 +3569,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -3575,7 +3824,7 @@ function plProbable(p){
   const outs=S.holdings.map(h=>({sym:h.sym,rsi:rsiOf(h.sym)}))
     .sort((a,b)=>((a.rsi==null?-1:a.rsi))-((b.rsi==null?-1:b.rsi)));
   // the whole universe ranked, best monthly RSI first
-  const ranked=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,S.mmin!==undefined?S.mmin:null);
+  const ranked=stFilter(PLLAST.rows,S.rmin!==undefined?S.rmin:null,mcFloor(S,PLLAST.date||S.month));
   if(!outs.length||!ranked.length)return null;
 
   // All Change rebuilds the Top-N every month, so several holdings can drop out at
@@ -3728,6 +3977,7 @@ async function rerunTracked(P){
   if(g('Amt'))g('Amt').value=amt;
   if(g('Rsi'))g('Rsi').value=(rmin==null?'':rmin);
   if(g('Mc'))g('Mc').value=(mmin==null?'':mmin);
+  mcSchedSet(P,S.mcSched||null);
   await inst.screen();
   await inst.start([...syms]);
   await inst.runTillToday();
@@ -5276,7 +5526,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 (function(){
   const to=new Date(),from=new Date(); from.setFullYear(to.getFullYear()-1);
   ['anTo','exTo','dlTo'].forEach(i=>document.getElementById(i).value=to.toISOString().slice(0,10));
-  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','pcDate','pfDate','t1Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
+  ['anFrom','exFrom','dlFrom','stDate','mcDate','sxDate','wkDate','mwDate','dcDate','pcDate','pfDate','t1Date','twDate'].forEach(i=>document.getElementById(i).value=from.toISOString().slice(0,10));
   // populate Multi Month year dropdowns (1998 → current)
   const cy=to.getFullYear();
   for(const id of ['mmYear','mmYear2']){
@@ -5308,6 +5558,132 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 })();
 try{ssTfLabels();dlTfLabels();rsiOpUI('mm');rsiOpUI('mr');}catch(e){}
 init();
+</script>
+<script>
+/* ===== Market-cap floor: Fixed, or a different floor for each year =====
+   A by-year schedule is a list of {y, v}: the floor v (Rs cr) applies from 1 January of
+   year y until the next row's year. Dates before the first row use the first row. */
+const MC_PANES=['ac','ta','mc','wk','mw','dc','tw'];
+function floorAt(sched,date){
+  if(!sched||!sched.length)return null;
+  const y=+String(date).slice(0,4); let v=sched[0].v;
+  for(const r of sched){ if(r.y<=y)v=r.v; else break; }
+  return v;
+}
+function mcFloor(S,date){ return S&&S.mcSched?floorAt(S.mcSched,date):(S&&S.mmin!==undefined?S.mmin:null); }
+function mcSchedText(sched){ return (sched||[]).map(r=>r.y+': ₹'+fmt0(r.v)+' cr').join(', '); }
+const MCUI={};   // P -> {mode, rows:[{y,v}]}
+function mcLoad(P){ try{ return JSON.parse(localStorage.getItem('mcRule_'+P))||null; }catch(e){ return null; } }
+function mcSave(P){ try{ localStorage.setItem('mcRule_'+P,JSON.stringify(MCUI[P])); }catch(e){} }
+/* the schedule to run with: null = Fixed mode, false = By year but nothing usable entered */
+function mcSchedActive(P){
+  const u=MCUI[P]; if(!u||u.mode!=='year')return null;
+  const rows=u.rows.filter(r=>r.y>=1990&&r.y<=2100&&r.v>=0&&r.v!==null&&r.v!==''&&!isNaN(r.v))
+    .map(r=>({y:+r.y,v:+r.v})).sort((a,b)=>a.y-b.y);
+  const dedup=[]; rows.forEach(r=>{ if(dedup.length&&dedup[dedup.length-1].y===r.y)dedup[dedup.length-1]=r; else dedup.push(r); });
+  return dedup.length?dedup:false;
+}
+function mcSchedSet(P,sched){
+  if(!MCUI[P])return;
+  if(sched&&sched.length){ MCUI[P]={mode:'year',rows:sched.map(r=>({y:r.y,v:r.v}))}; }
+  else MCUI[P].mode='fixed';
+  mcSave(P); mcRender(P);
+}
+function mcRender(P){
+  const u=MCUI[P], box=document.getElementById(P+'Mc'); if(!u||!box)return;
+  const seg=document.getElementById(P+'McSeg'), panel=document.getElementById(P+'McPanel');
+  seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.m===u.mode));
+  const lab=box.parentElement.querySelector('label');
+  if(lab)lab.textContent=u.mode==='year'?'Min Mcap today (₹ cr)':'Min Mcap (₹ cr)';
+  box.placeholder=u.mode==='year'?'for auto-fill':'e.g. 1000';
+  panel.classList.toggle('hidden',u.mode!=='year');
+  if(u.mode!=='year')return;
+  const rows=document.getElementById(P+'McRows');
+  rows.innerHTML=u.rows.map((r,i)=>
+    `<div class="mcrow"><span>From</span><input type="number" min="1990" max="2100" value="${r.y??''}" data-i="${i}" data-k="y">`+
+    `<span>₹</span><input class="v" type="number" min="0" value="${r.v??''}" data-i="${i}" data-k="v"><span>cr</span>`+
+    `<button class="x" title="remove" data-del="${i}">✕</button></div>`).join('')||
+    '<span class="mcnote">No years yet — add one, or auto-fill.</span>';
+  rows.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',()=>{
+    const i=+inp.dataset.i; u.rows[i][inp.dataset.k]=inp.value===''?null:+inp.value; mcSave(P); }));
+  rows.querySelectorAll('button[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    u.rows.splice(+b.dataset.del,1); mcSave(P); mcRender(P); }));
+}
+function mcAddYear(P){
+  const u=MCUI[P]; const ys=u.rows.map(r=>+r.y).filter(Boolean);
+  const startY=+((document.getElementById(P+'Date')||{}).value||'').slice(0,4)||1998;
+  const y=ys.length?Math.max(...ys)+1:startY;
+  const last=u.rows.length?u.rows[u.rows.length-1].v:(+document.getElementById(P+'Mc').value||null);
+  u.rows.push({y,v:last}); mcSave(P); mcRender(P);
+}
+/* Auto-fill: take today's floor and scale it back year by year with the NIFTY 50, so a
+   share has to be roughly as "big relative to the market" in 2005 as it is today. */
+async function mcAutoFill(P){
+  const now=+document.getElementById(P+'Mc').value;
+  const st=document.getElementById(P+'McNote');
+  if(!(now>0)){ st.textContent='Type today\'s floor in the Min Mcap box first (e.g. 3000), then press Auto-fill.'; st.style.color='var(--amber)'; return; }
+  const step=+document.getElementById(P+'McStep').value||1;
+  let rows;
+  try{ rows=await loadSeries('ix','NIFTY_50'); }catch(e){ st.textContent='Could not load NIFTY 50 data: '+e.message; return; }
+  if(!rows||!rows.length){ st.textContent='NIFTY 50 data not available.'; return; }
+  const lastClose=rows[rows.length-1].close, lastY=+rows[rows.length-1].date.slice(0,4);
+  const firstOfYear={}; rows.forEach(r=>{const y=r.date.slice(0,4); if(!(y in firstOfYear))firstOfYear[y]=r.close;});
+  const startY=Math.max(+Object.keys(firstOfYear)[0], 1998);   // always from 1998, the first year of share data
+  const nice=v=>{ if(v<=0)return 0; const p=Math.pow(10,Math.floor(Math.log10(v))-1); return Math.max(10,Math.round(v/p)*p); };
+  const out=[];
+  for(let y=startY;y<=lastY;y+=step){ const n=firstOfYear[String(y)]; if(n)out.push({y,v:nice(now*n/lastClose)}); }
+  MCUI[P].rows=out; mcSave(P); mcRender(P);
+  st.style.color=''; st.textContent=`Filled ${out.length} year(s) from today's ₹${fmt0(now)} cr, scaled by the NIFTY 50 level at the start of each year. Edit any number you like.`;
+}
+function mcBuild(P){
+  const box=document.getElementById(P+'Mc'); if(!box)return;
+  MCUI[P]=mcLoad(P)||{mode:'fixed',rows:[]};
+  const cell=box.parentElement;
+  const segWrap=document.createElement('div');
+  segWrap.innerHTML=`<label>Market cap rule</label><div class="mcseg" id="${P}McSeg"><button type="button" data-m="fixed">Fixed</button><button type="button" data-m="year">By year</button></div>`;
+  cell.parentElement.insertBefore(segWrap,cell);
+  segWrap.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ MCUI[P].mode=b.dataset.m; mcSave(P); mcRender(P); }));
+  const panel=document.createElement('div');
+  panel.className='mcpanel hidden'; panel.id=P+'McPanel';
+  panel.innerHTML=`<div class="mchead"><b>Market-cap floor by year</b><div class="row" style="margin:0;gap:8px;align-items:center">`+
+    `<button type="button" class="ghost mini" onclick="mcAddYear('${P}')">+ Add year</button>`+
+    `<span style="font-size:11.5px;color:var(--muted)">Auto-fill every</span><select id="${P}McStep" style="padding:4px 8px"><option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option><option value="5">5 years</option></select>`+
+    `<button type="button" class="ghost mini" onclick="mcAutoFill('${P}')">Auto-fill from NIFTY growth</button></div></div>`+
+    `<div class="mcrows" id="${P}McRows"></div>`+
+    `<div class="mcnote" id="${P}McNote">Each floor applies from 1 January of its year until the next row. Months before the first row use the first row's floor.</div>`;
+  cell.parentElement.insertAdjacentElement('afterend',panel);
+  mcRender(P);
+}
+MC_PANES.forEach(P=>{ try{ mcBuild(P); }catch(e){ console.error('mc ui',P,e); } });
+</script>
+<script>
+/* ===== Day / dark mode ===== */
+(function(){
+  const LIGHT={tick:'#5d6778',grid:'#e8ecf2',legend:'#1f2937'};
+  const isLight=()=>document.documentElement.dataset.theme==='light';
+  function paint(c){
+    const o=c.options; if(!o)return;
+    if(!c.$orig){c.$orig={scales:{},legend:o.plugins&&o.plugins.legend&&o.plugins.legend.labels?o.plugins.legend.labels.color:undefined,
+      title:o.plugins&&o.plugins.title?o.plugins.title.color:undefined};
+      Object.entries(o.scales||{}).forEach(([k,sc])=>{c.$orig.scales[k]={t:sc.ticks&&sc.ticks.color,g:sc.grid&&sc.grid.color,ti:sc.title&&sc.title.color};});}
+    const L=isLight();
+    Object.entries(o.scales||{}).forEach(([k,sc])=>{const og=c.$orig.scales[k]||{};
+      if(sc.ticks)sc.ticks.color=L?LIGHT.tick:og.t;
+      if(sc.grid&&sc.grid.display!==false)sc.grid.color=L?LIGHT.grid:og.g;
+      if(sc.title)sc.title.color=L?LIGHT.tick:og.ti;});
+    if(o.plugins&&o.plugins.legend&&o.plugins.legend.labels)o.plugins.legend.labels.color=L?LIGHT.legend:c.$orig.legend;
+    if(o.plugins&&o.plugins.title&&c.$orig.title!==undefined)o.plugins.title.color=L?LIGHT.tick:c.$orig.title;
+  }
+  if(window.Chart&&Chart.register)Chart.register({id:'uiTheme',beforeUpdate:c=>{try{paint(c);}catch(e){}}});
+  function label(){const b=document.getElementById('themeBtn'); if(b)b.textContent=isLight()?'☾ Dark mode':'☀ Day mode';}
+  window.toggleTheme=function(){
+    if(isLight())delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme='light';
+    try{localStorage.setItem('uiTheme',isLight()?'light':'dark');}catch(e){}
+    label();
+    if(window.Chart&&Chart.instances)Object.values(Chart.instances).forEach(c=>{try{c.update('none');}catch(e){}});
+  };
+  label();
+})();
 </script>
 </body>
 </html>
