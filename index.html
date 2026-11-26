@@ -235,7 +235,8 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
     <div class="nav-item"><button class="nav-btn">P&amp;L Strategies</button>
       <div class="nav-drop"><a data-pane="ta">All Change (tracked)</a><a data-pane="tw">Weekly Change (tracked)</a></div></div>
     <div class="nav-item"><button class="nav-btn">RSI Strategy</button>
-      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="wk">Weekly Change</a><a data-pane="mw">Multi Weekly Change</a><a data-pane="dc">Daily Change</a></div></div>
+      <div class="nav-drop"><a data-pane="ac">All Change</a><a data-pane="mc">Multi Change</a><a data-pane="mw">Multi Weekly Change</a></div></div>
+    <div class="nav-item solo"><div class="nav-drop"><a data-pane="rs">RSI &amp; Stoch</a></div></div>
     <div class="nav-item"><button class="nav-btn">Tools</button>
       <div class="nav-drop"><a data-pane="chart">Chart</a><a data-pane="screener">Screener</a><a data-pane="analyse">Analyse</a><a data-pane="export">Export</a></div></div>
   </div>
@@ -465,6 +466,61 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
     <div class="subcard">
       <div class="section-head">Share In / Share Out — monthly log</div>
       <div class="tblwrap" style="max-height:240px"><table id="acLogTbl"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTOR STRATEGY (step 6) -->
+
+<!-- RSI & STOCH -->
+<div class="card hidden" id="pane-rs">
+  <div class="section-head">RSI &amp; Stoch — Top N by Monthly RSI, bought only if Monthly Stoch is below your level</div>
+  <div id="rsSetup">
+    <div class="row">
+      <div><label>Start date</label><input type="date" id="rsDate" style="width:150px"></div>
+      <div><label>End month (blank = today)</label>
+      <select id="rsEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+    <div><label>End year</label><select id="rsEndYear"><option value="">—</option></select></div>
+    <div><label>Top N by Monthly RSI</label><input type="number" id="rsN" style="width:80px" value="20"></div>
+      <div><label>Monthly Stoch below</label><input type="number" id="rsStoch" style="width:90px" value="80" min="1" max="100"></div>
+      <div><label>Shares</label><select id="rsUni"><option value="all">All shares</option><option value="fo">Only F&amp;O shares</option></select></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="rsMc" style="width:110px" placeholder="e.g. 5000"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="rsAmt" style="width:120px" placeholder="e.g. 100000"></div>
+      <button onclick="rsRun('rs')">Run till today ▶</button>
+      <button id="rsCont" class="hidden" onclick="rsContinue('rs')">▶ Continue</button>
+    </div>
+    <div class="status" id="rsSetupStatus">At every month-end: rank shares by Monthly RSI (above your market-cap floor, and only F&amp;O shares if you choose), take the Top N, and hold only those whose Monthly Stoch %K is below your level. Shares that drop out are sold; each new buy gets one slot (1/N of the portfolio) and unfilled slots wait in cash.</div>
+    <div class="hidden"><table id="rsPickTbl"></table><button id="rsStartBtn"></button></div>
+  </div>
+  <div id="rsRun" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="status" id="rsHead" style="font-size:14px"></div>
+      <div>
+        <button id="rsNextBtn" class="hidden"></button>
+        <button class="ghost" id="rsTillBtn" onclick="rsTillToday('rs')">⏩ Run till today</button>
+        <button class="ghost" onclick="STRATS.rs.download()">⬇ Download report</button>
+        <button class="ghost" onclick="saveRun('rs')">💾 Save run</button>
+        <button class="ghost" onclick="rsReset('rs')">↺ New run</button>
+      </div>
+    </div>
+    <div class="hidden" id="rsSwapRow"><div id="rsSwaps"></div></div>
+    <div class="chartbox" style="height:300px"><canvas id="rsChart"></canvas></div>
+    <div class="chartbox" style="height:210px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('rs',2,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('rs',2,1)">▶</button>
+      <canvas id="rsChart2"></canvas></div>
+    <div class="chartbox" style="height:190px;margin-top:10px">
+      <button class="chart-nav prev" onclick="panBars('rs',3,-1)">◀</button>
+      <button class="chart-nav next" onclick="panBars('rs',3,1)">▶</button>
+      <canvas id="rsChart3"></canvas></div>
+    <div class="row" id="rsInsights" style="margin-top:12px;gap:22px"></div>
+    <div class="subcard">
+      <div class="section-head">Holdings</div>
+      <div class="tblwrap" style="max-height:260px"><table id="rsHoldTbl"></table></div>
+    </div>
+    <div class="subcard">
+      <div class="section-head">Share In / Share Out — monthly log</div>
+      <div class="tblwrap" style="max-height:240px"><table id="rsLogTbl"></table></div>
     </div>
   </div>
 </div>
@@ -1485,7 +1541,7 @@ async function syncSharedRuns(){
   }
   if(added){try{putRuns(local);}catch(e){}}
   // if this device has no live run for a strategy, adopt the newest shared one
-  ['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>{
+  ['st','mc','ac','wk','mw','dc','rs','sx','ta','t1','tw'].forEach(p=>{
     const r=newest[p];
     if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
       try{
@@ -1556,7 +1612,7 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
+  try{['st','mc','ac','wk','mw','dc','rs','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
@@ -1688,7 +1744,7 @@ function panBars(P,which,dir){
   ch.update();
 }
 /* ============ website nav ============ */
-const ALLPANES=['mw','dc','ac','dl','mm','mr','st','mc','wk','pc','pf','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
+const ALLPANES=['rs','mw','dc','ac','dl','mm','mr','st','mc','wk','pc','pf','sx','ta','t1','tw','ss','sh','sr','pl','chart','screener','analyse','export','ix1','ix2','ix3','ix4','ix5','bh','sn'];
 function showPane(p){
   // a pane missing from this list used to blank the whole page: every known pane was
   // hidden and the requested one was never shown.  Guard the lookup and fall back to
@@ -2312,7 +2368,7 @@ function makeStrategy(P,fixedN,title,opts){
     const niftyRet=(S.nifty&&S.niftyBase&&S.nifty[S.month])?((S.nifty[S.month]/S.niftyBase-1)*100):null;
     const perf=[];
     S.holdings.forEach(h=>perf.push({sym:h.sym,pct:(h.lastClose-h.buyPrice)/h.buyPrice*100,open:true}));
-    S.log.filter(l=>l.out).forEach(l=>perf.push({sym:l.out,pct:l.pnl,open:false}));
+    S.log.filter(l=>l.out&&!l.fromCash).forEach(l=>perf.push({sym:l.out,pct:l.pnl,open:false}));
     perf.sort((a,b)=>b.pct-a.pct);
     return {value,ret,mdd,months,cagr,swaps,niftyRet,perf};
   };
@@ -2471,7 +2527,7 @@ function makeStrategy(P,fixedN,title,opts){
                           :[l.month,'— no change —',l.why||'','','','','']));
       const ws4=XLSX.utils.aoa_to_sheet(log); ws4['!cols']=[{wch:10},{wch:15},{wch:11},{wch:15},{wch:11},{wch:11},{wch:12}];
       XLSX.utils.book_append_sheet(wb,ws4,'Share In-Out Log');
-      const fname=`${P==='mc'?'multi':P==='ac'?'all':P==='sx'?'sector':'one'}_change_strategy_${S.screenDate}_to_${S.month}.xlsx`;
+      const fname=`${P==='mc'?'multi':P==='ac'?'all':P==='rs'?'rsi_stoch':P==='sx'?'sector':'one'}_change_strategy_${S.screenDate}_to_${S.month}.xlsx`;
       if(window.__wbSink)window.__wbSink(wb,fname); else XLSX.writeFile(wb,fname);
     }catch(e){alert('Download failed: '+e.message);}
   };
@@ -2488,7 +2544,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),mw:makeStrategy('mw',null,'Multi Weekly Change',{weekly:true,maxN:5,datedCagr:true}),dc:makeStrategy('dc',100000,'Daily Change',{weekly:true,daily:true,datedCagr:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),rs:makeStrategy('rs',1,'RSI & Stoch Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),mw:makeStrategy('mw',null,'Multi Weekly Change',{weekly:true,maxN:5,datedCagr:true}),dc:makeStrategy('dc',100000,'Daily Change',{weekly:true,daily:true,datedCagr:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -2753,6 +2809,12 @@ async function acRun(P){
   STRATS[P].S=S;
   S.auto={months,topN,mcMin,i:0};
   if(mcSched){S.mcSched=mcSched; S.auto.mcSched=mcSched;}
+  if(P==='rs'){   // RSI & Stoch: Stoch ceiling + universe
+    const sk=+document.getElementById('rsStoch').value;
+    if(!(sk>0&&sk<=100)){setS(P+'SetupStatus','Enter a Monthly Stoch level between 1 and 100.','warn');STRATS[P].S=null;return;}
+    S.auto.stochMax=sk; S.auto.uni=document.getElementById('rsUni').value||'all';
+    S.auto.slots=true;
+  }
   await acLoop(P);
 }
 
@@ -2774,9 +2836,21 @@ async function acLoop(P){
     try{sc=await loadScanByMonth(mth);}catch(e){}
     if(!sc)continue;
     const mcNow=S.mcSched?floorAt(S.mcSched,mth):mcMin;     // by-year floors change on 1 January
-    const rows=sc.rows.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcNow).sort((a,b)=>b.rsi_m-a.rsi_m);
-    const top=rows.slice(0,topN);
+    let pool=sc.rows;
+    if(S.auto.uni==='fo'){        // only shares that were in F&O in that month (point-in-time list)
+      const fo=foOn(await foMembership(),mth);
+      if(!fo){setS(P+'SetupStatus','F&O membership list could not be loaded.','warn');runEnd();acBtns(P);return;}
+      pool=pool.filter(r=>fo.has(r.symbol));
+    }
+    const rows=pool.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcNow).sort((a,b)=>b.rsi_m-a.rsi_m);
+    let top=rows.slice(0,topN);
+    if(S.auto.stochMax!=null){    // keep only the Top N whose Monthly Stoch %K is below the level
+      const sk=await Promise.all(top.map(r=>monthlyStochAt(r.symbol,mth)));
+      top.forEach((r,ix)=>{r._stoch=sk[ix];});
+      top=top.filter(r=>r._stoch!=null&&r._stoch<S.auto.stochMax);
+    }
     const map=new Map(sc.rows.map(r=>[r.symbol,r]));
+    if(S.auto.slots){ rsStep(S,mth,sc,top,topN,amt,map); continue; }
     if(!S.holdings.length){
       if(!top.length){
         const nRows=sc.rows.length;
@@ -2833,7 +2907,7 @@ async function acLoop(P){
   }
   const halted=stopped()&&S.auto.i<months.length;
   runEnd();
-  if(!S.series.length||!S.holdings.length||!S.invested){
+  if(!S.series.length||!S.invested||(!S.holdings.length&&!S.auto.slots)){
     setS(P+'SetupStatus','No shares matched your filters in that period - check the RSI/mcap levels, or wait for MEGA to finish syncing the data, then run again.','warn');
     STRATS[P].S=null; acBtns(P); return;
   }
@@ -2846,7 +2920,7 @@ async function acLoop(P){
   document.getElementById(P+'Run').classList.remove('hidden');
   try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
   const done=S.auto.i, total=months.length;
-  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI, mcap ${S.mcSched?'by year ('+mcSchedText(S.mcSched)+')':'≥ ₹'+fmt0(mcMin)+' cr'}`+
+  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI${S.auto.stochMax!=null?`, Monthly Stoch < ${S.auto.stochMax}, ${S.auto.uni==='fo'?'F&O shares only':'all shares'}`:''}, mcap ${S.mcSched?'by year ('+mcSchedText(S.mcSched)+')':'≥ ₹'+fmt0(mcMin)+' cr'}`+
     (halted?` · PAUSED at ${S.month} (${done}/${total} months)`:''));
   setS(P+'SetupStatus',
     halted?`Paused at ${S.month} — ${done} of ${total} months done, ${total-done} to go. Look around, then press Continue.`
@@ -2855,6 +2929,61 @@ async function acLoop(P){
   acBtns(P);
 }
 
+
+/* ===== RSI & Stoch helpers ===== */
+// Monthly Stoch %K (14,3,3) of a share at the close of a completed month, built from its
+// daily bars exactly as the Chart page does. Cached per share.
+const MSTOCH=new Map();
+async function monthlyStochAt(sym,ym){
+  let m=MSTOCH.get(sym);
+  if(!m){
+    m=new Map();
+    try{ const bars=resample((await loadSeries('eq',sym)).map(r=>({...r})),'M');
+         bars.forEach(b=>m.set(b.date.slice(0,7),b.stoch_k)); }catch(e){}
+    MSTOCH.set(sym,m);
+  }
+  const v=m.get(String(ym).slice(0,7));
+  return v==null?null:v;
+}
+/* One month of RSI & Stoch. The portfolio has N slots; each slot is 1/N of the portfolio.
+   Holdings that are no longer in the filtered Top N are sold; each new name gets one slot
+   from cash; slots with nothing to buy stay in cash. */
+function rsStep(S,mth,sc,top,topN,amt,map){
+  if(!S.series.length){
+    S.screenDate=sc.date; S.month=mth;
+    S.cash=topN*amt; S.invested=topN*amt;
+    top.forEach(r=>{
+      const b=buyWhole(S,amt,r.close);
+      if(b.units)S.holdings.push({sym:r.symbol,units:b.units,buyPrice:r.close,cost:b.spent,lastClose:r.close,rsi:r.rsi_m,stoch:r._stoch,buyMonth:mth});
+    });
+    S.log.push({month:mth,out:null,inSym:null,why:`started with ${S.holdings.length} of ${topN} slots filled (Stoch filter)`});
+    S.series.push({month:mth,value:portValue(S)});
+    return;
+  }
+  S.month=mth;
+  for(const h of S.holdings){const r=map.get(h.sym); if(r){h.lastClose=r.close;h.rsi=r.rsi_m;} else h.rsi=null;}
+  const target=new Set(top.map(r=>r.symbol));
+  const held=new Set(S.holdings.map(h=>h.sym));
+  const exits=S.holdings.filter(h=>!target.has(h.sym));
+  const entries=top.filter(r=>!held.has(r.symbol));
+  const slot=portValue(S)/topN;
+  exits.forEach(h=>{ S.cash+=h.units*h.lastClose; S.holdings.splice(S.holdings.indexOf(h),1); });
+  const buys=[];
+  entries.forEach(r=>{
+    const spend=Math.min(slot,S.cash);
+    const b=buyWhole(S,spend,r.close);
+    if(b.units){S.holdings.push({sym:r.symbol,units:b.units,buyPrice:r.close,cost:b.spent,lastClose:r.close,rsi:r.rsi_m,stoch:r._stoch,buyMonth:mth}); buys.push({r,spent:b.spent});}
+  });
+  // log: pair each sale with a purchase where possible; the rest go to / come from cash
+  const n=Math.max(exits.length,buys.length);
+  for(let j=0;j<n;j++){
+    const h=exits[j], b=buys[j];
+    if(h&&b) S.log.push({month:mth,out:h.sym,outBuy:h.buyPrice,outSell:h.lastClose,pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:b.r.symbol,inPrice:b.r.close,amount:b.spent});
+    else if(h) S.log.push({month:mth,out:h.sym,outBuy:h.buyPrice,outSell:h.lastClose,pnl:(h.lastClose-h.buyPrice)/h.buyPrice*100,inSym:'→ cash',inPrice:0,amount:h.units*h.lastClose});
+    else S.log.push({month:mth,out:'cash →',outBuy:0,outSell:0,pnl:0,inSym:b.r.symbol,inPrice:b.r.close,amount:b.spent,fromCash:true});
+  }
+  S.series.push({month:mth,value:portValue(S)});
+}
 /* show Continue only while a run is sitting half-finished */
 function acBtns(P){
   const b=document.getElementById(P+'Cont');
@@ -2902,7 +3031,7 @@ async function acTillToday(P){
 function acReset(P){
   P=P||'ac';
   STRATS[P].reset();
-  setS(P+'SetupStatus','Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.','');
+  setS(P+'SetupStatus',P==='rs'?'At every month-end: Top N by Monthly RSI (above your market-cap floor, F&O only if chosen), held only if Monthly Stoch %K is below your level. Each buy gets one slot (1/N of the portfolio); unfilled slots wait in cash.':'Every month the portfolio is replaced by the Top N monthly-RSI shares above the mcap floor — sold positions fund their replacements. No manual input.','');
 }
 
 /* ============ chart tab ============ */
@@ -3461,7 +3590,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -3489,7 +3618,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -3538,7 +3667,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -3569,7 +3698,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
@@ -3744,6 +3873,7 @@ function mrDownload(kind){
 const PLDEFS=[['ta','All Change Holding','#22d3ee'],['tw','Weekly Change Holding','#fbbf24']];
 let PLDATA=null, plChartObj=null, PLLAST=null, PLMAPS=null,
     PLHOLDSEL=null, PLHOLDSORT={key:'value',dir:-1};
+const PL_DAYS=20;   // Daily P&L shows the last 20 trading days
 function plInit(){ if(!PLDATA)plRefresh(); }
 async function plRefresh(){
   if(!MANIFEST){setS('plStatus','Not connected to data yet.','warn');return;}
@@ -3775,6 +3905,12 @@ async function plRefresh(){
     else if(i===0)dates=all.slice(0);
   }
   if(dates.length<2)dates=all.slice(-2);
+  {
+    const last=dates[dates.length-1], curM=last.slice(0,7);
+    let base=-1; for(let i=dates.length-1;i>=0;i--){ if(dates[i].slice(0,7)!==curM){base=i;break;} }
+    const from=Math.max(0,Math.min(dates.length-1-PL_DAYS, base>=0?base:0));
+    dates=dates.slice(from);
+  }
   const maps=[];
   for(let i=0;i<dates.length;i++){
     setS('plStatus',`loading ${i+1}/${dates.length} days…`,'');
@@ -4130,26 +4266,27 @@ function plRender(){
       ${probHtml}
     </div>`;
   }).join('');
-  // chart: daily % per strategy
-  const labels=dates.slice(1);
+  // chart: daily % per strategy — last PL_DAYS trading days only
+  const off=Math.max(0,dates.length-1-PL_DAYS);
+  const labels=dates.slice(1+off);
   const dsets=series.map(s=>({label:s.label,
-    data:labels.map((_,i)=>{const a=s.vals[i],b=s.vals[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
+    data:labels.map((_,j)=>{const i=j+off,a=s.vals[i],b=s.vals[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
     borderColor:s.color,backgroundColor:s.color+'22',borderWidth:2.4,pointRadius:0,pointHoverRadius:4,
     pointHoverBackgroundColor:s.color,tension:.3,spanGaps:true,
     borderCapStyle:'round',borderJoinStyle:'round'}));
-  if(nifty)dsets.push({label:'NIFTY 50',data:labels.map((_,i)=>{const a=nifty[i],b=nifty[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
+  if(nifty)dsets.push({label:'NIFTY 50',data:labels.map((_,j)=>{const i=j+off,a=nifty[i],b=nifty[i+1];return (a&&b)?+((b/a-1)*100).toFixed(2):null;}),
     borderColor:'#7d8998',borderWidth:1.4,borderDash:[6,4],pointRadius:0,tension:.3,spanGaps:true});
   if(plChartObj)plChartObj.destroy();
   plChartObj=new Chart(document.getElementById('plChart'),{type:'line',data:{labels,datasets:dsets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#e6edf3'}},title:{display:true,text:'Daily % move',color:'#8b949e'}},
+      plugins:{legend:{labels:{color:'#e6edf3'}},title:{display:true,text:`Daily % move — last ${labels.length} trading days`,color:'#8b949e'}},
       scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12},grid:{color:'#21262d'}},
               y:{ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}}}});
   // table newest first
   const t=document.getElementById('plTbl');
   t.innerHTML='<tr><th style="text-align:left">Date</th>'+
     series.map(s=>`<th>${s.label}</th>`).join('')+'<th>NIFTY 50</th></tr>'+
-    labels.map((d,i)=>i).reverse().filter(i=>series.some(s=>s.vals[i]!=null&&s.vals[i+1]!=null)).map(i=>{
+    labels.map((d,j)=>j+off).reverse().filter(i=>series.some(s=>s.vals[i]!=null&&s.vals[i+1]!=null)).map(i=>{
       const cells=series.map(s=>{
         const a=s.vals[i],b=s.vals[i+1];
         if(a==null||b==null)return '<td>—</td>';
@@ -4159,7 +4296,7 @@ function plRender(){
       let nc='<td>—</td>';
       if(nifty&&nifty[i]&&nifty[i+1]){const np=(nifty[i+1]/nifty[i]-1)*100;
         nc=`<td class="${np>=0?'pos':'neg'}">${np>=0?'+':''}${fmt(np)}%</td>`;}
-      return `<tr><td style="text-align:left">${labels[i]}</td>${cells}${nc}</tr>`;
+      return `<tr><td style="text-align:left">${dates[i+1]}</td>${cells}${nc}</tr>`;
     }).join('');
   const now=new Date().toISOString().slice(0,10);
   const stale=dates[d0]<now;
@@ -4171,10 +4308,11 @@ function plDownload(){
   try{
     if(!PLDATA){setS('plStatus','Press Refresh first.','warn');return;}
     const {dates,series,nifty}=PLDATA;
-    const labels=dates.slice(1);
+    const off=Math.max(0,dates.length-1-PL_DAYS);
+    const labels=dates.slice(1+off);
     const header=['Date'].concat(series.flatMap(s=>[s.label+' ₹',s.label+' %'])).concat(['NIFTY 50 %']);
-    const rows=labels.map((d,i)=>{
-      const r=[d];
+    const rows=labels.map((d,j)=>{
+      const i=j+off, r=[d];
       series.forEach(s=>{
         const a=s.vals[i],b=s.vals[i+1];
         r.push(a==null||b==null?'':Math.round(b-a));
@@ -5546,12 +5684,12 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
   document.getElementById('mrYear').value=cy-1;
   document.getElementById('mrMonth').value='01';
   document.getElementById('mrMonth2').value=String(to.getMonth()+1).padStart(2,'0');
-  ['acEndYear','taEndYear'].forEach(id=>{
+  ['acEndYear','taEndYear','rsEndYear'].forEach(id=>{
     const e=document.getElementById(id); if(!e)return;
     for(let yy=cy;yy>=1998;yy--){const o=document.createElement('option');o.value=yy;o.textContent=yy;e.appendChild(o);}
     e.value='';
   });
-  ['acDate','taDate'].forEach(id=>{
+  ['acDate','taDate','rsDate'].forEach(id=>{
     const e=document.getElementById(id); if(!e)return;
     e.value='2020-03-01';
   });
@@ -5563,7 +5701,7 @@ init();
 /* ===== Market-cap floor: Fixed, or a different floor for each year =====
    A by-year schedule is a list of {y, v}: the floor v (Rs cr) applies from 1 January of
    year y until the next row's year. Dates before the first row use the first row. */
-const MC_PANES=['ac','ta','mc','wk','mw','dc','tw'];
+const MC_PANES=['ac','ta','rs','mc','wk','mw','dc','tw'];
 function floorAt(sched,date){
   if(!sched||!sched.length)return null;
   const y=+String(date).slice(0,4); let v=sched[0].v;
