@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>try{if(localStorage.getItem('uiTheme')==='light')document.documentElement.dataset.theme='light';}catch(e){}</script>
+<script>try{localStorage.removeItem('strat_rs');}catch(e){}try{if(localStorage.getItem('uiTheme')==='light')document.documentElement.dataset.theme='light';}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Back-Testing Platform</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1514,7 +1514,7 @@ async function syncSharedRuns(){
   }
   if(added){try{putRuns(local);}catch(e){}}
   // if this device has no live run for a strategy, adopt the newest shared one
-  ['st','mc','ac','wk','mw','dc','rs','sx','ta','t1','tw'].forEach(p=>{
+  ['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>{
     const r=newest[p];
     if(r&&STRATS[p]&&(!STRATS[p].S||!STRATS[p].S.holdings||!STRATS[p].S.holdings.length)){
       try{
@@ -1585,7 +1585,7 @@ function afterLoad(){
     LOOKUP.push({kind:'eq',id:e.symbol,label:e.symbol,name:e.name||'',meta:e});
   });
   MANIFEST.indices.forEach(i=>LOOKUP.push({kind:'ix',id:i.file,label:i.index,name:'',meta:i}));
-  try{['st','mc','ac','wk','mw','dc','rs','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
+  try{['st','mc','ac','wk','mw','dc','sx','ta','t1','tw'].forEach(p=>STRATS[p].restore());}catch(e){}
   try{renderWatchlist();}catch(e){}
   // strategies stay on the device that ran them
   try{if(!document.getElementById('pane-pl').classList.contains('hidden'))plRefresh();}catch(e){}
@@ -2517,7 +2517,7 @@ function makeStrategy(P,fixedN,title,opts){
   };
   return inst;
 }
-const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),rs:makeStrategy('rs',1,'RSI & Stoch Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),mw:makeStrategy('mw',null,'Multi Weekly Change',{weekly:true,maxN:5,datedCagr:true}),dc:makeStrategy('dc',100000,'Daily Change',{weekly:true,daily:true,datedCagr:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
+const STRATS={st:makeStrategy('st',1,'One Change Strategy'),mc:makeStrategy('mc',null,'Multi Change Strategy'),ac:makeStrategy('ac',1,'All Change Strategy'),wk:makeStrategy('wk',1,'Weekly Change Strategy',{weekly:true}),mw:makeStrategy('mw',null,'Multi Weekly Change',{weekly:true,maxN:5,datedCagr:true}),dc:makeStrategy('dc',100000,'Daily Change',{weekly:true,daily:true,datedCagr:true}),pc:makeStrategy('pc',1,'Perfect Change',{weekly:true,perfect:true}),pf:makeStrategy('pf',1,'Perfect Change (fallback)',{weekly:true,perfect:true,fallback:true}),sx:makeStrategy('sx',null,'Sector Strategy',{sectors:true}),ta:makeStrategy('ta',1,'Tracked All Change'),t1:makeStrategy('t1',1,'Tracked One Change'),tw:makeStrategy('tw',1,'Tracked Weekly Change',{weekly:true})};
 
 /* ---- Sector Strategy custom flow: free share picking, free-text sectors, variable changes ---- */
 (function(){
@@ -3574,7 +3574,7 @@ async function folderSave(run){
       window.__wbSink=null; resolve();
     };
     try{
-      if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
+      if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(run.type))STRATS[run.type].download();
       else if(run.type==='ss')ssDownload('xlsx');
       else if(run.type==='sh')shDownload('xlsx');
       else {window.__wbSink=null;resolve();}
@@ -3602,7 +3602,7 @@ function getRuns(){try{return JSON.parse(localStorage.getItem('savedRuns')||'[]'
 function putRuns(r){localStorage.setItem('savedRuns',JSON.stringify(r));}
 function saveRun(t){
   let payload=null;
-  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     const S=STRATS[t].S;
     if(!S||!S.series||!S.series.length){alert('Nothing to save yet — run the strategy first.');return;}
     payload=S;
@@ -3651,7 +3651,7 @@ function openRun(id){
 }
 function openRunObj(r){
   const t=r.type;
-  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     STRATS[t].S=r.payload;
     document.getElementById(t+'Setup').classList.add('hidden');
     document.getElementById(t+'Run').classList.remove('hidden');
@@ -3682,7 +3682,7 @@ function openRunObj(r){
 function runExcel(id){
   const r=findRun(id); if(!r)return;
   const t=r.type;
-  if(['st','mc','ac','sx','wk','mw','dc','rs','ta','t1','tw'].includes(t)){
+  if(['st','mc','ac','sx','wk','mw','dc','ta','t1','tw'].includes(t)){
     const prev=STRATS[t].S; STRATS[t].S=r.payload;
     try{STRATS[t].download();}finally{STRATS[t].S=prev;}
   } else if(t==='ss'){
