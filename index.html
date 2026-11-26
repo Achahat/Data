@@ -474,58 +474,31 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
 
 <!-- RSI & STOCH -->
 <div class="card hidden" id="pane-rs">
-  <div class="section-head">RSI &amp; Stoch — Top N by Monthly RSI, bought only if Monthly Stoch is below your level</div>
-  <div id="rsSetup">
+  <div class="section-head">RSI &amp; Stoch — fresh basket every month</div>
+  <div class="subcard" id="rsSetup">
     <div class="row">
-      <div><label>Start date</label><input type="date" id="rsDate" style="width:150px"></div>
-      <div><label>End month (blank = today)</label>
-      <select id="rsEndMonth"><option value="">— today —</option><option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
-    <div><label>End year</label><select id="rsEndYear"><option value="">—</option></select></div>
-    <div><label>Top N by Monthly RSI</label><input type="number" id="rsN" style="width:80px" value="20"></div>
-      <div><label>Monthly Stoch below</label><input type="number" id="rsStoch" style="width:90px" value="80" min="1" max="100"></div>
+      <div><label>Start date</label><input type="date" id="rsDate"></div>
+      <div><label>End date (blank = today)</label><input type="date" id="rsEnd"></div>
       <div><label>Shares</label><select id="rsUni"><option value="fo" selected>Only F&amp;O shares</option><option value="all">All shares</option></select></div>
-      <div><label>Min Mcap (₹ cr)</label><input type="number" id="rsMc" style="width:110px" placeholder="e.g. 5000"></div>
-      <div><label>Amount per share (₹)</label><input type="number" id="rsAmt" style="width:120px" placeholder="e.g. 100000"></div>
-      <button onclick="acRun('rs').catch(e=>{try{runEnd();}catch(_){} setS('rsSetupStatus','Stopped with an error: '+e.message,'warn');console.error(e);})">Run till today ▶</button>
-      <button id="rsCont" class="hidden" onclick="acContinue('rs')">▶ Continue</button>
+      <div><label>Top N by Monthly RSI</label><input type="number" id="rsN" style="width:80px" value="20" min="1"></div>
+      <div><label>Buy if Monthly Stoch below</label><input type="number" id="rsStoch" style="width:90px" value="80" min="1" max="100"></div>
+      <div><label>Min Mcap (₹ cr)</label><input type="number" id="rsMc" style="width:110px" placeholder="blank = none"></div>
+      <div><label>Amount per share (₹)</label><input type="number" id="rsAmt" style="width:130px" value="100000"></div>
+      <div style="align-self:end"><button id="rsGo" onclick="rsMonthlyRun().catch(e=>{rsBusy(false);setS('rsSetupStatus','Stopped with an error: '+e.message,'warn');console.error(e);})">Run ▶</button></div>
     </div>
-    <div class="status" id="rsSetupStatus">At every month-end: rank shares by Monthly RSI (above your market-cap floor, and only F&amp;O shares if you choose), take the Top N, and hold only those whose Monthly Stoch %K is below your level. Shares that drop out are sold; each new buy gets one slot (1/N of the portfolio) and unfilled slots wait in cash.</div>
-    <div class="hidden"><table id="rsPickTbl"></table><button id="rsStartBtn"></button></div>
+    <div class="status" id="rsSetupStatus">Every month: take the Top N shares by Monthly RSI (F&amp;O shares only if chosen — the F&amp;O list of that month), buy the ones whose Monthly Stoch %K is below your level at the close of the month's first trading day (or your start date), and sell all of them at the close of the month's last trading day. RSI and Stoch are read at the previous month-end, so nothing uses future data.</div>
   </div>
-  <div id="rsRun" class="hidden">
-    <div class="row" style="justify-content:space-between">
-      <div class="status" id="rsHead" style="font-size:14px"></div>
-      <div>
-        <button id="rsNextBtn" class="hidden"></button>
-        <button class="ghost" id="rsTillBtn" onclick="acTillToday('rs')">⏩ Run till today</button>
-        <button class="ghost" onclick="STRATS.rs.download()">⬇ Download report</button>
-        <button class="ghost" onclick="saveRun('rs')">💾 Save run</button>
-        <button class="ghost" onclick="acReset('rs')">↺ New run</button>
-      </div>
+  <div id="rsOut" class="hidden" style="margin-top:16px">
+    <div class="cards" id="rsCards" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px"></div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+      <b style="font-size:14.5px">Monthly return</b>
+      <button class="ghost mini" onclick="rsMonthlyDownload()">⬇ Download Excel</button>
     </div>
-    <div class="hidden" id="rsSwapRow"><div id="rsSwaps"></div></div>
-    <div class="chartbox" style="height:300px"><canvas id="rsChart"></canvas></div>
-    <div class="chartbox" style="height:210px;margin-top:10px">
-      <button class="chart-nav prev" onclick="panBars('rs',2,-1)">◀</button>
-      <button class="chart-nav next" onclick="panBars('rs',2,1)">▶</button>
-      <canvas id="rsChart2"></canvas></div>
-    <div class="chartbox" style="height:190px;margin-top:10px">
-      <button class="chart-nav prev" onclick="panBars('rs',3,-1)">◀</button>
-      <button class="chart-nav next" onclick="panBars('rs',3,1)">▶</button>
-      <canvas id="rsChart3"></canvas></div>
-    <div class="row" id="rsInsights" style="margin-top:12px;gap:22px"></div>
-    <div class="subcard">
-      <div class="section-head">Holdings</div>
-      <div class="tblwrap" style="max-height:260px"><table id="rsHoldTbl"></table></div>
-    </div>
-    <div class="subcard">
-      <div class="section-head">Share In / Share Out — monthly log</div>
-      <div class="tblwrap" style="max-height:240px"><table id="rsLogTbl"></table></div>
-    </div>
+    <div class="chartbox" style="height:300px;padding:10px"><canvas id="rsChart"></canvas></div>
+    <div class="tblwrap" style="margin-top:14px"><table id="rsTbl"></table></div>
   </div>
 </div>
 
-<!-- SECTOR STRATEGY (step 6) -->
 <div class="card hidden" id="pane-sx">
   <div class="section-head">Sector Strategy — pick any shares, name your own sectors, track each group</div>
   <div id="sxSetup">
@@ -5695,7 +5668,7 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
   document.getElementById('mrYear').value=cy-1;
   document.getElementById('mrMonth').value='01';
   document.getElementById('mrMonth2').value=String(to.getMonth()+1).padStart(2,'0');
-  ['acEndYear','taEndYear','rsEndYear'].forEach(id=>{
+  ['acEndYear','taEndYear'].forEach(id=>{
     const e=document.getElementById(id); if(!e)return;
     for(let yy=cy;yy>=1998;yy--){const o=document.createElement('option');o.value=yy;o.textContent=yy;e.appendChild(o);}
     e.value='';
@@ -5707,6 +5680,132 @@ function setS(id,msg,cls){const e=document.getElementById(id);e.textContent=msg;
 })();
 try{ssTfLabels();dlTfLabels();rsiOpUI('mm');rsiOpUI('mr');}catch(e){}
 init();
+</script>
+<script>
+/* ===== RSI & Stoch — fresh basket every month =====
+   For each calendar month M in the run:
+     signal day = last trading day of the month before M (Monthly RSI + Monthly Stoch read there)
+     universe   = F&O list of month M (or all shares), above the market-cap floor
+     pick       = Top N by Monthly RSI, then keep those with Monthly Stoch %K below the level
+     buy        = close of M's first trading day (first month: first trading day on/after the start date)
+     sell       = close of M's last trading day (current month: latest close, shown as open)
+   Each share gets the same rupee amount, whole shares only. */
+let RSRES=null, rsChartObj=null;
+function rsBusy(on){const b=document.getElementById('rsGo'); if(b){b.disabled=on; b.textContent=on?'Running…':'Run ▶';}}
+const RSPX=new Map();
+async function rsPrices(sym){
+  if(!RSPX.has(sym)){ let m=null; try{ const rows=await loadSeries('eq',sym); m=rows; }catch(e){} RSPX.set(sym,m); }
+  return RSPX.get(sym);
+}
+function rsCloseOn(rows,d){   // close on date d, or the last close before it (suspensions)
+  if(!rows)return null; let lo=0,hi=rows.length-1,ans=null;
+  while(lo<=hi){const mid=(lo+hi)>>1; if(rows[mid].date<=d){ans=rows[mid];lo=mid+1;}else hi=mid-1;}
+  return ans?{date:ans.date,close:ans.close}:null;
+}
+async function rsMonthlyRun(){
+  const P='rs', g=id=>document.getElementById(P+id);
+  const start=g('Date').value, endIn=g('End').value, uni=g('Uni').value;
+  const N=Math.max(1,Math.floor(+g('N').value||0)), sk=+g('Stoch').value, amt=+g('Amt').value;
+  if(!start){setS(P+'SetupStatus','Pick a start date.','warn');return;}
+  if(!(sk>0&&sk<=100)){setS(P+'SetupStatus','Enter a Monthly Stoch level between 1 and 100.','warn');return;}
+  if(!(amt>0)){setS(P+'SetupStatus','Enter the amount per share.','warn');return;}
+  const mcSched=mcSchedActive(P);
+  if(mcSched===false){setS(P+'SetupStatus','Market cap by year: add at least one year with a floor, or switch back to Fixed.','warn');return;}
+  const mcFixed=g('Mc').value===''?null:+g('Mc').value;
+  rsBusy(true); setS(P+'SetupStatus','loading trading days…','');
+  const dates=await getScanDates();
+  if(!dates||!dates.length){rsBusy(false);setS(P+'SetupStatus','Trading-day list not available.','warn');return;}
+  const end=endIn||dates[dates.length-1];
+  const fo=uni==='fo'?await foMembership():null;
+  if(uni==='fo'&&!fo){rsBusy(false);setS(P+'SetupStatus','The F&O membership list could not be loaded.','warn');return;}
+  const firstFo=fo?[...fo.keys()].sort()[0]:null;
+  // months in the run
+  const byMonth=new Map(); dates.forEach(d=>{const k=d.slice(0,7); if(!byMonth.has(k))byMonth.set(k,[]); byMonth.get(k).push(d);});
+  const months=[...byMonth.keys()].filter(k=>k>=start.slice(0,7)&&k<=end.slice(0,7)&&(!firstFo||k>=firstFo));
+  if(!months.length){rsBusy(false);setS(P+'SetupStatus',firstFo&&start.slice(0,7)<firstFo?`No F&O list before ${firstFo}.`:'No trading months in that range.','warn');return;}
+  let nifty=null; try{ nifty=await loadSeries('ix','NIFTY_50'); }catch(e){}
+  const out=[];
+  for(let mi=0;mi<months.length;mi++){
+    const M=months[mi]; const days=byMonth.get(M).filter(d=>d<=end);
+    const buyDay=(mi===0?days.find(d=>d>=start):days[0]);
+    if(!buyDay)continue;
+    const sellDay=days[days.length-1];
+    // the latest month in the data (or the month of your end date) isn't finished: sold at its latest close, marked open
+    const isOpen=(M===dates[dates.length-1].slice(0,7))||(!!endIn&&M===endIn.slice(0,7));
+    // signal: previous month's last trading day
+    const prevKeys=[...byMonth.keys()].filter(k=>k<M); const prevM=prevKeys[prevKeys.length-1];
+    if(!prevM)continue;
+    const sigDay=byMonth.get(prevM).slice(-1)[0];
+    setS(P+'SetupStatus',`running ${M}… (${mi+1}/${months.length})`,'');
+    const sc=await loadScanByDate(sigDay); if(!sc)continue;
+    let pool=sc.rows;
+    if(fo){const set=foOn(fo,M); pool=set?pool.filter(r=>set.has(r.symbol)):[];}
+    const floor=mcSched?floorAt(mcSched,buyDay):mcFixed;
+    const ranked=pool.filter(r=>r.rsi_m!=null&&(floor==null||(r.mcap_cr!=null&&r.mcap_cr>=floor))).sort((a,b)=>b.rsi_m-a.rsi_m).slice(0,N);
+    const stochs=await Promise.all(ranked.map(r=>monthlyStochAt(r.symbol,prevM)));
+    const picks=ranked.map((r,k)=>({sym:r.symbol,rsi:r.rsi_m,stoch:stochs[k]})).filter(x=>x.stoch!=null&&x.stoch<sk);
+    const trades=[];
+    for(const x of picks){
+      const rows=await rsPrices(x.sym);
+      const b=rsCloseOn(rows,buyDay), sl=rsCloseOn(rows,sellDay);
+      if(!b||b.date<byMonth.get(M)[0]||!sl)continue;          // not trading at the start of the month
+      const units=Math.floor(amt/b.close); if(!units)continue;
+      trades.push({...x,buy:b.close,sell:sl.close,units,inv:units*b.close,pnl:units*(sl.close-b.close),ret:(sl.close/b.close-1)*100,stale:sl.date!==sellDay});
+    }
+    const inv=trades.reduce((a,t)=>a+t.inv,0), pnl=trades.reduce((a,t)=>a+t.pnl,0);
+    let nret=null; if(nifty){const a=rsCloseOn(nifty,buyDay),z=rsCloseOn(nifty,sellDay); if(a&&z)nret=(z.close/a.close-1)*100;}
+    out.push({month:M,sigDay,buyDay,sellDay,open:isOpen,ranked:ranked.length,trades,inv,pnl,ret:inv?pnl/inv*100:0,nifty:nret});
+  }
+  RSRES={params:{start,end,uni,N,sk,amt,floor:mcSched?mcSchedText(mcSched):mcFixed},months:out};
+  rsBusy(false); rsMonthlyRender();
+  setS(P+'SetupStatus',`done · ${out.length} months · ${uni==='fo'?'F&O shares only':'all shares'}${firstFo&&start.slice(0,7)<firstFo?` (F&O lists start ${firstFo}, so the run begins there)`:''}`,'');
+}
+function rsMonthlyRender(){
+  if(!RSRES)return; const M=RSRES.months;
+  document.getElementById('rsOut').classList.remove('hidden');
+  const done=M.filter(m=>!m.open), inv=done.filter(m=>m.trades.length);
+  const totalPnl=M.reduce((a,m)=>a+m.pnl,0);
+  const avg=inv.length?inv.reduce((a,m)=>a+m.ret,0)/inv.length:null;
+  const wins=inv.filter(m=>m.ret>0).length;
+  const comp=inv.reduce((a,m)=>a*(1+m.ret/100),1);
+  const nComp=done.filter(m=>m.nifty!=null).reduce((a,m)=>a*(1+m.nifty/100),1);
+  const card=(t,v,sub,cls)=>`<div class="subcard" style="min-width:170px;padding:12px 16px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${t}</div><div style="font-size:20px;font-weight:700;margin-top:2px" class="${cls||''}">${v}</div><div style="font-size:11.5px;color:var(--muted)">${sub||''}</div></div>`;
+  const pc=v=>v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
+  document.getElementById('rsCards').innerHTML=
+    card('Months',done.length,`${inv.length} invested · ${done.length-inv.length} in cash`)+
+    card('Average month',pc(avg),'invested months only',avg>=0?'pos':'neg')+
+    card('Winning months',inv.length?`${wins} / ${inv.length}`:'—',inv.length?`${(wins/inv.length*100).toFixed(0)}% hit rate`:'')+
+    card('Total P&L','₹'+fmt0(totalPnl),'sum of all months',totalPnl>=0?'pos':'neg')+
+    card('Compounded',pc((comp-1)*100),'invested months chained')+
+    card('NIFTY 50 same months',pc((nComp-1)*100),'compounded');
+  const labels=M.map(m=>m.month);
+  if(rsChartObj)rsChartObj.destroy();
+  rsChartObj=new Chart(document.getElementById('rsChart'),{type:'bar',data:{labels,datasets:[
+    {label:'Strategy %',data:M.map(m=>m.trades.length?+m.ret.toFixed(2):0),backgroundColor:M.map(m=>m.ret>=0?'rgba(34,197,94,.75)':'rgba(240,68,82,.75)')},
+    {label:'NIFTY 50 %',data:M.map(m=>m.nifty==null?null:+m.nifty.toFixed(2)),type:'line',borderColor:'#8b95a7',pointRadius:0,borderWidth:1.5}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:24},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}},
+      plugins:{legend:{labels:{color:'#e6edf3'}}}}});
+  let cum=0;
+  const rows=M.map(m=>{cum+=m.pnl; const names=m.trades.map(t=>`${t.sym}${t.stale?'*':''} (${t.ret>=0?'+':''}${t.ret.toFixed(1)}%)`).join(', ');
+    return `<tr><td style="text-align:left">${m.month}${m.open?' <span style="color:var(--amber)">open</span>':''}</td><td>${m.buyDay}</td><td>${m.sellDay}</td><td>${m.trades.length} / ${m.ranked}</td>`+
+      `<td>${fmt0(m.inv)}</td><td class="${m.pnl>=0?'pos':'neg'}">${fmt0(m.pnl)}</td><td class="${m.ret>=0?'pos':'neg'}">${m.trades.length?pc(m.ret):'cash'}</td>`+
+      `<td>${m.nifty==null?'—':pc(m.nifty)}</td><td class="${cum>=0?'pos':'neg'}">${fmt0(cum)}</td><td style="text-align:left;white-space:normal;min-width:320px;font-size:11.5px">${names||'—'}</td></tr>`;}).reverse().join('');
+  document.getElementById('rsTbl').innerHTML=`<thead><tr><th style="text-align:left">Month</th><th>Buy (close)</th><th>Sell (close)</th><th>Bought / Top N</th><th>Invested ₹</th><th>P&amp;L ₹</th><th>Return</th><th>NIFTY 50</th><th>Cumulative P&amp;L ₹</th><th style="text-align:left">Shares (return)</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function rsMonthlyDownload(){
+  if(!RSRES)return; const p=RSRES.params;
+  const a=[['RSI & Stoch — fresh basket every month'],['Start',p.start,'End',p.end],['Shares',p.uni==='fo'?'Only F&O':'All'],['Top N',p.N,'Monthly Stoch below',p.sk],['Amount per share',p.amt,'Min mcap',p.floor??'none'],[],
+    ['Month','Signal day','Buy day','Sell day','Bought','Top N found','Invested','P&L','Return %','NIFTY 50 %','Open month']];
+  RSRES.months.forEach(m=>a.push([m.month,m.sigDay,m.buyDay,m.sellDay,m.trades.length,m.ranked,Math.round(m.inv),Math.round(m.pnl),m.trades.length?+m.ret.toFixed(2):0,m.nifty==null?'':+m.nifty.toFixed(2),m.open?'yes':'']));
+  const t=[['Month','Share','Monthly RSI','Monthly Stoch','Buy','Sell','Units','Invested','P&L','Return %']];
+  RSRES.months.forEach(m=>m.trades.forEach(x=>t.push([m.month,x.sym,+x.rsi.toFixed(2),+x.stoch.toFixed(2),x.buy,x.sell,x.units,Math.round(x.inv),Math.round(x.pnl),+x.ret.toFixed(2)])));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),'Monthly');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),'Trades');
+  const fname=`rsi_stoch_monthly_${p.start}_to_${p.end}.xlsx`;
+  if(window.__wbSink)window.__wbSink(wb,fname); else XLSX.writeFile(wb,fname);
+}
 </script>
 <script>
 /* ===== Market-cap floor: Fixed, or a different floor for each year =====
