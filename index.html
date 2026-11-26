@@ -492,7 +492,7 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
     <div class="cards" id="rsCards" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px"></div>
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
       <b style="font-size:14.5px">Monthly return</b>
-      <button class="ghost mini" onclick="rsMonthlyDownload()">⬇ Download Excel</button>
+      <span><button class="ghost mini" id="rsExpBtn" onclick="rsExpandAll()">▾ Expand all months</button> <button class="ghost mini" onclick="rsMonthlyDownload()">⬇ Download Excel</button></span>
     </div>
     <div class="chartbox" style="height:300px;padding:10px"><canvas id="rsChart"></canvas></div>
     <div class="tblwrap" style="margin-top:14px"><table id="rsTbl"></table></div>
@@ -5743,18 +5743,24 @@ async function rsMonthlyRun(){
     const floor=mcSched?floorAt(mcSched,buyDay):mcFixed;
     const ranked=pool.filter(r=>r.rsi_m!=null&&(floor==null||(r.mcap_cr!=null&&r.mcap_cr>=floor))).sort((a,b)=>b.rsi_m-a.rsi_m).slice(0,N);
     const stochs=await Promise.all(ranked.map(r=>monthlyStochAt(r.symbol,prevM)));
-    const picks=ranked.map((r,k)=>({sym:r.symbol,rsi:r.rsi_m,stoch:stochs[k]})).filter(x=>x.stoch!=null&&x.stoch<sk);
-    const trades=[];
-    for(const x of picks){
-      const rows=await rsPrices(x.sym);
-      const b=rsCloseOn(rows,buyDay), sl=rsCloseOn(rows,sellDay);
-      if(!b||b.date<byMonth.get(M)[0]||!sl)continue;          // not trading at the start of the month
-      const units=Math.floor(amt/b.close); if(!units)continue;
-      trades.push({...x,buy:b.close,sell:sl.close,units,inv:units*b.close,pnl:units*(sl.close-b.close),ret:(sl.close/b.close-1)*100,stale:sl.date!==sellDay});
+    const first=byMonth.get(M)[0], cands=[];
+    for(let k=0;k<ranked.length;k++){
+      const r=ranked[k], st=stochs[k], c={rank:k+1,sym:r.symbol,rsi:r.rsi_m,stoch:st,mcap:r.mcap_cr};
+      const rows=await rsPrices(r.symbol), bq=rsCloseOn(rows,buyDay), sq=rsCloseOn(rows,sellDay);
+      const priced=!!(bq&&bq.date>=first&&sq);
+      if(priced){c.buyDate=bq.date;c.buy=bq.close;c.sellDate=sq.date;c.sell=sq.close;c.ret=(sq.close/bq.close-1)*100;}
+      if(st==null) c.why='no Stoch yet';
+      else if(!(st<sk)) c.why=`Stoch ≥ ${sk}`;
+      else if(!priced) c.why='no price on buy day';
+      else{ const units=Math.floor(amt/bq.close);
+        if(!units) c.why='price > amount';
+        else Object.assign(c,{bought:true,units,inv:units*bq.close,pnl:units*(sq.close-bq.close),stale:sq.date!==sellDay}); }
+      cands.push(c);
     }
+    const trades=cands.filter(c=>c.bought);
     const inv=trades.reduce((a,t)=>a+t.inv,0), pnl=trades.reduce((a,t)=>a+t.pnl,0);
     let nret=null; if(nifty){const a=rsCloseOn(nifty,buyDay),z=rsCloseOn(nifty,sellDay); if(a&&z)nret=(z.close/a.close-1)*100;}
-    out.push({month:M,sigDay,buyDay,sellDay,open:isOpen,ranked:ranked.length,trades,inv,pnl,ret:inv?pnl/inv*100:0,nifty:nret});
+    out.push({month:M,sigDay,buyDay,sellDay,open:isOpen,ranked:ranked.length,trades,cands,inv,pnl,ret:inv?pnl/inv*100:0,nifty:nret});
   }
   RSRES={params:{start,end,uni,N,sk,amt,floor:mcSched?mcSchedText(mcSched):mcFixed},months:out};
   rsBusy(false); rsMonthlyRender();
@@ -5787,22 +5793,40 @@ function rsMonthlyRender(){
       scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:24},grid:{color:'#21262d'}},y:{ticks:{color:'#8b949e',callback:v=>v+'%'},grid:{color:'#21262d'}}},
       plugins:{legend:{labels:{color:'#e6edf3'}}}}});
   let cum=0;
-  const rows=M.map(m=>{cum+=m.pnl; const names=m.trades.map(t=>`${t.sym}${t.stale?'*':''} (${t.ret>=0?'+':''}${t.ret.toFixed(1)}%)`).join(', ');
-    return `<tr><td style="text-align:left">${m.month}${m.open?' <span style="color:var(--amber)">open</span>':''}</td><td>${m.buyDay}</td><td>${m.sellDay}</td><td>${m.trades.length} / ${m.ranked}</td>`+
+  const n2=v=>v==null?'—':v.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const rows=M.map((m,i)=>{cum+=m.pnl;
+    const det=m.cands.map(c=>{const mut=c.bought?'':'color:var(--muted)';
+      return `<tr style="${mut}"><td>${c.rank}</td><td style="text-align:left;font-weight:${c.bought?700:400}">${c.sym}</td><td>${c.rsi.toFixed(1)}</td><td>${c.stoch==null?'—':c.stoch.toFixed(1)}</td>`+
+        `<td style="text-align:left">${c.bought?'<span class="pos">✔ Bought</span>':'✖ Left out · '+c.why}</td>`+
+        `<td>${c.buyDate||'—'}</td><td>${n2(c.buy)}</td><td>${c.bought?c.units:'—'}</td><td>${c.sellDate||'—'}${c.stale?' *':''}</td><td>${n2(c.sell)}</td>`+
+        `<td>${c.bought?fmt0(c.inv):'—'}</td><td class="${c.bought?(c.pnl>=0?'pos':'neg'):''}">${c.bought?fmt0(c.pnl):'—'}</td>`+
+        `<td class="${c.bought&&c.ret!=null?(c.ret>=0?'pos':'neg'):''}">${c.ret==null?'—':pc(c.ret)}${c.bought||c.ret==null?'':' <small>(not held)</small>'}</td></tr>`;}).join('');
+    const left=m.cands.filter(c=>!c.bought&&c.ret!=null), lavg=left.length?left.reduce((a,c)=>a+c.ret,0)/left.length:null;
+    const detail=`<tr id="rsD${i}" class="hidden"><td colspan="10" style="padding:6px 10px 16px;background:var(--panel2,rgba(127,127,127,.06))">
+      <div style="font-size:12px;margin:4px 0 8px">Top ${m.ranked} by Monthly RSI on <b>${m.sigDay}</b> · bought <b>${m.trades.length}</b>, left out <b>${m.ranked-m.trades.length}</b> · month return on money invested <b class="${m.ret>=0?'pos':'neg'}">${m.trades.length?pc(m.ret):'cash — nothing bought'}</b>${lavg==null?'':` · the left-out shares averaged ${pc(lavg)} over the same days`}</div>
+      <table style="width:100%;font-size:12px"><thead><tr><th>#</th><th style="text-align:left">Share</th><th>Monthly RSI</th><th>Monthly Stoch</th><th style="text-align:left">Decision</th><th>Buy date</th><th>Buy price</th><th>Units</th><th>Sell date</th><th>Sell price</th><th>Invested ₹</th><th>P&amp;L ₹</th><th>Return</th></tr></thead><tbody>${det||'<tr><td colspan="13">No shares found for this month.</td></tr>'}</tbody></table>
+      ${m.trades.some(t=>t.stale)?'<div style="font-size:11px;color:var(--muted);margin-top:4px">* not traded on the month\'s last day — sold at its last available close.</div>':''}</td></tr>`;
+    const main=`<tr style="cursor:pointer" onclick="rsToggle(${i})" title="Click to see all Top ${m.ranked} shares"><td style="text-align:left"><span id="rsA${i}">▸</span> ${m.month}${m.open?' <span style="color:var(--amber)">open</span>':''}</td><td>${m.buyDay}</td><td>${m.sellDay}</td><td>${m.trades.length} / ${m.ranked}</td>`+
       `<td>${fmt0(m.inv)}</td><td class="${m.pnl>=0?'pos':'neg'}">${fmt0(m.pnl)}</td><td class="${m.ret>=0?'pos':'neg'}">${m.trades.length?pc(m.ret):'cash'}</td>`+
-      `<td>${m.nifty==null?'—':pc(m.nifty)}</td><td class="${cum>=0?'pos':'neg'}">${fmt0(cum)}</td><td style="text-align:left;white-space:normal;min-width:320px;font-size:11.5px">${names||'—'}</td></tr>`;}).reverse().join('');
-  document.getElementById('rsTbl').innerHTML=`<thead><tr><th style="text-align:left">Month</th><th>Buy (close)</th><th>Sell (close)</th><th>Bought / Top N</th><th>Invested ₹</th><th>P&amp;L ₹</th><th>Return</th><th>NIFTY 50</th><th>Cumulative P&amp;L ₹</th><th style="text-align:left">Shares (return)</th></tr></thead><tbody>${rows}</tbody>`;
+      `<td>${m.nifty==null?'—':pc(m.nifty)}</td><td class="${cum>=0?'pos':'neg'}">${fmt0(cum)}</td><td style="text-align:left;white-space:normal;min-width:320px;font-size:11.5px">${m.trades.map(t=>`${t.sym} (${t.ret>=0?'+':''}${t.ret.toFixed(1)}%)`).join(', ')||'—'}</td></tr>`;
+    return main+detail;}).reverse().join('');
+  document.getElementById('rsTbl').innerHTML=`<thead><tr><th style="text-align:left">Month <span style="font-weight:400;text-transform:none">(click for detail)</span></th><th>Buy (close)</th><th>Sell (close)</th><th>Bought / Top N</th><th>Invested ₹</th><th>P&amp;L ₹</th><th>Return</th><th>NIFTY 50</th><th>Cumulative P&amp;L ₹</th><th style="text-align:left">Bought (return)</th></tr></thead><tbody>${rows}</tbody>`;
 }
+function rsToggle(i,force){const r=document.getElementById('rsD'+i),a=document.getElementById('rsA'+i); if(!r)return;
+  const show=force==null?r.classList.contains('hidden'):force; r.classList.toggle('hidden',!show); if(a)a.textContent=show?'▾':'▸';}
+function rsExpandAll(){if(!RSRES)return; const open=RSRES.months.some((m,i)=>document.getElementById('rsD'+i)?.classList.contains('hidden'));
+  RSRES.months.forEach((m,i)=>rsToggle(i,open)); const b=document.getElementById('rsExpBtn'); if(b)b.textContent=open?'▴ Collapse all':'▾ Expand all months';}
 function rsMonthlyDownload(){
   if(!RSRES)return; const p=RSRES.params;
   const a=[['RSI & Stoch — fresh basket every month'],['Start',p.start,'End',p.end],['Shares',p.uni==='fo'?'Only F&O':'All'],['Top N',p.N,'Monthly Stoch below',p.sk],['Amount per share',p.amt,'Min mcap',p.floor??'none'],[],
     ['Month','Signal day','Buy day','Sell day','Bought','Top N found','Invested','P&L','Return %','NIFTY 50 %','Open month']];
   RSRES.months.forEach(m=>a.push([m.month,m.sigDay,m.buyDay,m.sellDay,m.trades.length,m.ranked,Math.round(m.inv),Math.round(m.pnl),m.trades.length?+m.ret.toFixed(2):0,m.nifty==null?'':+m.nifty.toFixed(2),m.open?'yes':'']));
-  const t=[['Month','Share','Monthly RSI','Monthly Stoch','Buy','Sell','Units','Invested','P&L','Return %']];
-  RSRES.months.forEach(m=>m.trades.forEach(x=>t.push([m.month,x.sym,+x.rsi.toFixed(2),+x.stoch.toFixed(2),x.buy,x.sell,x.units,Math.round(x.inv),Math.round(x.pnl),+x.ret.toFixed(2)])));
+  const t=[['Month','Rank','Share','Monthly RSI','Monthly Stoch','Decision','Buy date','Buy price','Units','Sell date','Sell price','Invested','P&L','Return %']];
+  RSRES.months.forEach(m=>m.cands.forEach(c=>t.push([m.month,c.rank,c.sym,+c.rsi.toFixed(2),c.stoch==null?'':+c.stoch.toFixed(2),c.bought?'Bought':'Left out: '+c.why,
+    c.buyDate||'',c.buy==null?'':+c.buy.toFixed(2),c.bought?c.units:'',c.sellDate||'',c.sell==null?'':+c.sell.toFixed(2),c.bought?Math.round(c.inv):'',c.bought?Math.round(c.pnl):'',c.ret==null?'':+c.ret.toFixed(2)])));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(a),'Monthly');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),'Trades');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(t),'Top N detail');
   const fname=`rsi_stoch_monthly_${p.start}_to_${p.end}.xlsx`;
   if(window.__wbSink)window.__wbSink(wb,fname); else XLSX.writeFile(wb,fname);
 }
