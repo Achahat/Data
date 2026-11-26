@@ -483,11 +483,11 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
     <div><label>End year</label><select id="rsEndYear"><option value="">—</option></select></div>
     <div><label>Top N by Monthly RSI</label><input type="number" id="rsN" style="width:80px" value="20"></div>
       <div><label>Monthly Stoch below</label><input type="number" id="rsStoch" style="width:90px" value="80" min="1" max="100"></div>
-      <div><label>Shares</label><select id="rsUni"><option value="all">All shares</option><option value="fo">Only F&amp;O shares</option></select></div>
+      <div><label>Shares</label><select id="rsUni"><option value="fo" selected>Only F&amp;O shares</option><option value="all">All shares</option></select></div>
       <div><label>Min Mcap (₹ cr)</label><input type="number" id="rsMc" style="width:110px" placeholder="e.g. 5000"></div>
       <div><label>Amount per share (₹)</label><input type="number" id="rsAmt" style="width:120px" placeholder="e.g. 100000"></div>
-      <button onclick="rsRun('rs')">Run till today ▶</button>
-      <button id="rsCont" class="hidden" onclick="rsContinue('rs')">▶ Continue</button>
+      <button onclick="acRun('rs').catch(e=>{try{runEnd();}catch(_){} setS('rsSetupStatus','Stopped with an error: '+e.message,'warn');console.error(e);})">Run till today ▶</button>
+      <button id="rsCont" class="hidden" onclick="acContinue('rs')">▶ Continue</button>
     </div>
     <div class="status" id="rsSetupStatus">At every month-end: rank shares by Monthly RSI (above your market-cap floor, and only F&amp;O shares if you choose), take the Top N, and hold only those whose Monthly Stoch %K is below your level. Shares that drop out are sold; each new buy gets one slot (1/N of the portfolio) and unfilled slots wait in cash.</div>
     <div class="hidden"><table id="rsPickTbl"></table><button id="rsStartBtn"></button></div>
@@ -497,10 +497,10 @@ html[data-theme="light"] .suggest div:hover,html[data-theme="light"] .suggest di
       <div class="status" id="rsHead" style="font-size:14px"></div>
       <div>
         <button id="rsNextBtn" class="hidden"></button>
-        <button class="ghost" id="rsTillBtn" onclick="rsTillToday('rs')">⏩ Run till today</button>
+        <button class="ghost" id="rsTillBtn" onclick="acTillToday('rs')">⏩ Run till today</button>
         <button class="ghost" onclick="STRATS.rs.download()">⬇ Download report</button>
         <button class="ghost" onclick="saveRun('rs')">💾 Save run</button>
-        <button class="ghost" onclick="rsReset('rs')">↺ New run</button>
+        <button class="ghost" onclick="acReset('rs')">↺ New run</button>
       </div>
     </div>
     <div class="hidden" id="rsSwapRow"><div id="rsSwaps"></div></div>
@@ -2812,8 +2812,18 @@ async function acRun(P){
   if(P==='rs'){   // RSI & Stoch: Stoch ceiling + universe
     const sk=+document.getElementById('rsStoch').value;
     if(!(sk>0&&sk<=100)){setS(P+'SetupStatus','Enter a Monthly Stoch level between 1 and 100.','warn');STRATS[P].S=null;return;}
-    S.auto.stochMax=sk; S.auto.uni=document.getElementById('rsUni').value||'all';
+    S.auto.stochMax=sk; S.auto.uni=document.getElementById('rsUni').value||'fo';
     S.auto.slots=true;
+    if(S.auto.uni==='fo'){
+      const mem=await foMembership();
+      if(!mem){setS(P+'SetupStatus','The F&O membership list could not be loaded.','warn');STRATS[P].S=null;return;}
+      const firstFo=[...mem.keys()].sort()[0];
+      if(months.length&&months[0]<firstFo){
+        S.auto.months=months.filter(k=>k>=firstFo);
+        S.auto.note=`F&O lists start ${firstFo}, so the run begins there`;
+        if(!S.auto.months.length){setS(P+'SetupStatus',`No F&O list exists before ${firstFo}. Pick a later end date.`,'warn');STRATS[P].S=null;return;}
+      }
+    }
   }
   await acLoop(P);
 }
@@ -2839,12 +2849,13 @@ async function acLoop(P){
     let pool=sc.rows;
     if(S.auto.uni==='fo'){        // only shares that were in F&O in that month (point-in-time list)
       const fo=foOn(await foMembership(),mth);
-      if(!fo){setS(P+'SetupStatus','F&O membership list could not be loaded.','warn');runEnd();acBtns(P);return;}
-      pool=pool.filter(r=>fo.has(r.symbol));
+      pool=fo?pool.filter(r=>fo.has(r.symbol)):[];    // no list for that month -> nothing to buy
     }
     const rows=pool.filter(r=>r.rsi_m!=null&&r.mcap_cr!=null&&r.mcap_cr>=mcNow).sort((a,b)=>b.rsi_m-a.rsi_m);
     let top=rows.slice(0,topN);
     if(S.auto.stochMax!=null){    // keep only the Top N whose Monthly Stoch %K is below the level
+      const fresh=top.filter(r=>!MSTOCH.has(r.symbol)).length;
+      if(fresh)setS(P+'SetupStatus',`running ${mth}… (${i+1}/${months.length}) · loading price history of ${fresh} share${fresh>1?'s':''} for Monthly Stoch`,'');
       const sk=await Promise.all(top.map(r=>monthlyStochAt(r.symbol,mth)));
       top.forEach((r,ix)=>{r._stoch=sk[ix];});
       top=top.filter(r=>r._stoch!=null&&r._stoch<S.auto.stochMax);
@@ -2920,7 +2931,7 @@ async function acLoop(P){
   document.getElementById(P+'Run').classList.remove('hidden');
   try{localStorage.setItem('strat_'+P,JSON.stringify(S));}catch(e){}
   const done=S.auto.i, total=months.length;
-  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI${S.auto.stochMax!=null?`, Monthly Stoch < ${S.auto.stochMax}, ${S.auto.uni==='fo'?'F&O shares only':'all shares'}`:''}, mcap ${S.mcSched?'by year ('+mcSchedText(S.mcSched)+')':'≥ ₹'+fmt0(mcMin)+' cr'}`+
+  STRATS[P].render(`auto-run ${S.series[0].month} → ${S.month} · Top ${topN} by monthly RSI${S.auto.stochMax!=null?`, Monthly Stoch < ${S.auto.stochMax}, ${S.auto.uni==='fo'?'F&O shares only':'all shares'}${S.auto.note?' ('+S.auto.note+')':''}`:''}, mcap ${S.mcSched?'by year ('+mcSchedText(S.mcSched)+')':'≥ ₹'+fmt0(mcMin)+' cr'}`+
     (halted?` · PAUSED at ${S.month} (${done}/${total} months)`:''));
   setS(P+'SetupStatus',
     halted?`Paused at ${S.month} — ${done} of ${total} months done, ${total-done} to go. Look around, then press Continue.`
